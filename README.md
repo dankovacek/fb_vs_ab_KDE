@@ -14,7 +14,7 @@ $$f(x) = \frac{1}{N} \sum_{i=1}^{N} \frac{1}{h \sqrt{2 \pi}} \exp \left( \frac{-
 
 The Silverman (1998) rule-of-thumb bandwidth is:
 
-$$\hat{h} = 1.06 \min(\hat{\sigma},\, \text{IQR}) \, N^{-1/5}$$
+$$\hat{h} = 1.06 \min(\hat{\sigma}, \text{IQR}) \, N^{-1/5}$$
 
 where $\hat{\sigma}$ is the sample standard deviation, IQR is the interquartile range, and $N$ is the sample size.
 
