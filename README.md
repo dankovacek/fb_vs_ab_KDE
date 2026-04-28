@@ -26,7 +26,7 @@ Both the error function and the minimum flow threshold are site-specific assumpt
 
 ## Methodology
 
-1. Compute the global unit area runoff (UAR) range $[\text{UAR}_\text{min},\, \text{UAR}_\text{max}]$ across all stations in the region.
+1. Compute the global unit area runoff (UAR) range $\[\text{UAR}_\text{min},\, \text{UAR}_\text{max}\]$ across all stations in the region.
 2. Extract unique flow values per station to define the sample support.
 3. Exclude stations with a single unique value or fewer than one complete hydrological year.
 4. Apply the piecewise error model to each unique value $q$, returning relative error $\varepsilon(q)$.
@@ -51,7 +51,7 @@ Divergence between the two estimators is measured with the Kolmogorov-Smirnov (K
 
 ## Data
 
-Download the Caravan dataset from [huggingface.co/datasets/kratzert/Caravan](https://huggingface.co/datasets/kratzert/Caravan). Set `Config.caravan_dir` in `scripts/config.py` to the local path of the extracted `Caravan-csv` folder before running any scripts. The folder must contain an `attributes/` subdirectory and a `timeseries/csv/` subdirectory, both organized by region.
+Download the Caravan dataset from [https://zenodo.org/records/6578598](https://zenodo.org/records/6578598). Set `Config.caravan_dir` in `scripts/config.py` to the local path of the extracted `Caravan-csv` folder before running any scripts. The folder must contain an `attributes/` subdirectory and a `timeseries/csv/` subdirectory, both organized by region.
 
 ## Reproducing the results
 
@@ -64,7 +64,6 @@ uv pip install -r requirements.txt
 ```
 
 3. Set `Config.caravan_dir` in `scripts/config.py` to the local path of the Caravan dataset.
-
 4. Run preprocessing to compute reference distributions:
 
 ```bash
