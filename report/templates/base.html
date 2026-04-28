@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %}</title>
+
+  {% block bokeh_cdn %}{% endblock %}
+
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '\\(', right: '\\)', display: false}
+            ]
+          });"></script>
+
+  <!-- EB Garamond -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap"
+        rel="stylesheet">
+
+  <style>
+    /* -- Reset & base ------------------------------------------------------- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --paper:  #fffff8;   /* Tufte cream */
+      --ink:    #111111;
+      --mid:    #5c5c5c;
+      --faint:  #979797;
+      --red:    #a00000;
+      --blue:   #1a3a52;
+      --mono:   "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+      --serif:  "EB Garamond", Palatino, "Palatino Linotype", serif;
+      --body-w: 900px;
+      --side-w: 200px;
+      --gap:    1.5rem;
+    }
+
+    html { font-size: 18px; scroll-behavior: smooth; }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--serif);
+      line-height: 1.65;
+    }
+
+    /* -- Layout: sidebar + main --------------------------------------------- */
+    .page-wrap {
+      display: flex;
+      align-items: flex-start;
+      max-width: calc(var(--side-w) + var(--gap) + var(--body-w) + 6rem);
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    /* -- Sticky sidebar TOC ------------------------------------------------- */
+    .toc {
+      position: sticky;
+      top: 2.5rem;
+      flex: 0 0 var(--side-w);
+      padding: 3rem 1.5rem 2rem 0;
+      font-size: 0.65rem;
+      font-family: var(--serif);
+      line-height: 1.4;
+      color: var(--mid);
+      max-height: 95vh;
+      overflow-y: auto;
+    }
+    .toc-title {
+      font-size: 0.8rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--faint);
+      margin-bottom: .9rem;
+    }
+    .toc ol { list-style: none; counter-reset: toc; }
+    .toc li { counter-increment: toc; margin-bottom: .5rem; margin-left: -.2rem; }
+    .toc li::before { content: counter(toc) ". "; color: var(--faint); }
+    .toc a { color: var(--mid); text-decoration: none; }
+    .toc a:hover { color: var(--red); }
+    .toc a.active {
+      color: var(--ink);
+      font-weight: 500;
+      background: rgba(0,0,0,0.055);
+      border-radius: 2px;
+      padding: 0.05em 0.3em;
+      margin: 0 -0.3em;
+    }
+
+    /* -- Main document ------------------------------------------------------ */
+    main {
+      flex: 1 1 var(--body-w);
+      min-width: 0;
+      padding: 3rem 0 5rem var(--gap);
+      border-left: 0px solid var(--faint);
+    }
+
+    /* -- Document title ----------------------------------------------------- */
+    .doc-title { margin-bottom: 3rem; }
+    .doc-title h1 {
+      font-size: 2rem;
+      font-weight: 500;
+      line-height: 1.25;
+      letter-spacing: -.01em;
+      margin-bottom: .45rem;
+    }
+    .doc-subtitle {
+      font-size: 1.2rem;
+      font-style: italic;
+      color: var(--mid);
+      margin-bottom: .4rem;
+      max-width: 600px;
+    }
+    .doc-date {
+      font-size: 0.75rem;
+      color: var(--faint);
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    /* -- Section headings --------------------------------------------------- */
+    section { margin-bottom: 3.5rem; }
+    section + section {
+      border-top: 1px solid var(--faint);
+      padding-top: 2.75rem;
+    }
+
+    h2 {
+      font-size: 1.15rem;
+      font-weight: 500;
+      margin-bottom: .5rem;
+    }
+    h2 .sec-num { color: var(--faint); font-size: .85em; margin-right: .3em; }
+
+    h3 {
+      font-size: 1rem;
+      font-weight: 500;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin: 2rem 0 .6rem;
+      padding-bottom: .25rem;
+      border-bottom: 1px solid var(--faint);
+    }
+
+    h4 {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--mid);
+      margin: 1.25rem 0 .35rem;
+    }
+
+    /* -- Body text ---------------------------------------------------------- */
+    p {
+      max-width: 700px;
+      margin-bottom: .85rem;
+      font-size: 0.95rem;
+    }
+    a { color: var(--blue); }
+    a:hover { color: var(--red); }
+
+    ul, ol { padding-left: 1.5rem; margin-bottom: .85rem; }
+    li { font-size: 0.9rem; margin-bottom: .25rem; }
+
+    code {
+      font-family: var(--mono);
+      font-size: 0.9em;
+      background: #f0f0ec;
+      padding: .1em .35em;
+      border-radius: 2px;
+    }
+
+    /* -- Code block --------------------------------------------------------- */
+    pre {
+      font-family: var(--mono);
+      font-size: 0.77rem;
+      line-height: 1.6;
+      background: #f6f6f2;
+      border-left: 2px solid var(--faint);
+      padding: .65rem 1rem;
+      margin: .75rem 0 1rem;
+      overflow-x: auto;
+      max-width: 580px;
+    }
+
+    /* -- Sidenote ----------------------------------------------------------- */
+    .sidenote-host { position: relative; }
+    .sidenote {
+      float: right;
+      clear: right;
+      margin-right: -100px;
+      width: 250px;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      color: var(--mid);
+      font-style: normal;
+      margin-top: .05em;
+      margin-bottom: .5rem;
+    }
+
+    /* -- Key-quantity callout ----------------------------------------------- */
+    .callout {
+      border-left: 2px solid var(--blue);
+      padding: .55rem 1rem;
+      margin: 1rem 0;
+      max-width: 660px;
+    }
+    .callout p, .callout li { font-size: 0.85rem; margin-bottom: .3rem; }
+
+    /* -- Metadata chips ----------------------------------------------------- */
+    .chip-row { margin: .5rem 0 1rem; }
+    .chip {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      border: 1px solid var(--faint);
+      padding: .12rem .45rem;
+      margin: .1rem .12rem .1rem 0;
+      color: var(--mid);
+    }
+
+    /* -- Small-multiple grids ----------------------------------------------- */
+    .grid-2x2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem 3rem;
+      margin: 1rem 0 1.5rem;
+    }
+    .pair-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 2rem 3rem;
+      margin: 1rem 0 1.5rem;
+    }
+    .sm-label {
+      font-size: 0.7rem;
+      font-variant: small-caps;
+      letter-spacing: .07em;
+      color: var(--mid);
+      margin-bottom: .2rem;
+      padding-bottom: .15rem;
+      border-bottom: 1px solid var(--faint);
+    }
+
+    /* -- Full-width Bokeh wrapper ------------------------------------------- */
+    .bk-wrap { overflow-x: auto; }
+
+    /* -- Rep-switcher (pure CSS + minimal JS) ------------------------------- */
+    .rep-switch {
+      display: flex;
+      gap: 1.5rem;
+      font-size: 0.9rem;
+      color: var(--mid);
+      margin: .6rem 0 .7rem;
+      border-bottom: 1px solid var(--faint);
+      padding-bottom: .35rem;
+    }
+    .rs-btn {
+      text-decoration: none;
+      color: var(--mid);
+      cursor: pointer;
+      padding-bottom: .35rem;
+      border-bottom: 2px solid transparent;
+      transition: color .12s, border-color .12s;
+      margin-bottom: -1px;
+      white-space: pre-line;
+      text-align: center;
+    }
+    .rs-btn.active {
+      color: var(--ink);
+      border-bottom-color: var(--blue);
+    }
+    .rs-btn:hover { color: var(--ink); }
+
+    .rs-btn--pair {
+      text-align: left;
+      white-space: normal;
+      min-width: 9rem;
+      line-height: 1.25;
+      padding: .1rem 0 .4rem;
+    }
+    .rs-btn--pair .pair-axis {
+      display: block;
+      font-size: 0.7rem;
+      color: var(--muted, #aaa);
+      font-style: italic;
+      margin-top: .15rem;
+    }
+    .rs-btn--pair.active .pair-axis { color: var(--mid); }
+
+    .rep-panel { display: none; }
+    .rep-panel.active { display: block; }
+
+    /* -- Nested rep-group --------------------------------------------------- */
+    .rep-group--nested { margin-top: .4rem; }
+    .rep-group--nested > .rep-switch {
+      font-size: 0.7rem;
+      gap: 1.1rem;
+      margin: .3rem 0 .5rem;
+      border-bottom-color: #e8e8e2;
+      padding-bottom: .25rem;
+    }
+    .rep-group--nested > .rep-switch .rs-btn {
+      color: #888;
+      padding-bottom: .25rem;
+    }
+    .rep-group--nested > .rep-switch .rs-btn.active {
+      color: var(--ink);
+      border-bottom-color: var(--mid);
+    }
+
+    /* -- Panel definition list ---------------------------------------------- */
+    .panel-list { margin: .75rem 0 1rem; max-width: 700px; }
+    .panel-list dt {
+      float: left;
+      clear: left;
+      width: 4.75rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      font-variant: small-caps;
+      color: var(--mid);
+      margin-top: .18em;
+      padding-right: .05rem;
+    }
+    .panel-list dd {
+      margin-left: 4.5rem;
+      font-size: 0.9rem;
+      margin-bottom: .65rem;
+      padding-left: .67rem;
+      border-left: 1px solid var(--faint);
+    }
+    .panel-list--block dt {
+      float: none;
+      width: auto;
+      font-variant: normal;
+      margin-top: .6rem;
+      margin-bottom: .1rem;
+    }
+    .panel-list--block dd { margin-left: 1rem; }
+
+    /* -- Jaccard failure-set table ------------------------------------------ */
+    .jaccard-wrap { margin-top: 1.4rem; }
+    .jaccard-row {
+      display: flex;
+      flex-direction: row;
+      gap: 2.2rem;
+      align-items: flex-start;
+      overflow-x: auto;
+    }
+    .jaccard-cell { flex: 0 0 auto; }
+    .jaccard-wrap p.jaccard-k {
+      font-size: 0.80rem;
+      color: var(--mid);
+      margin: 0 0 .15rem 0;
+      font-style: italic;
+    }
+    .jaccard-table {
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      margin-bottom: .9rem;
+    }
+    .jaccard-table th, .jaccard-table td {
+      padding: .22rem .55rem;
+      text-align: center;
+      min-width: 58px;
+    }
+    .jaccard-table thead th {
+      border-bottom: 2px solid var(--faint);
+      font-weight: 500;
+    }
+    .jaccard-table tbody th {
+      text-align: right;
+      padding-right: .65rem;
+      font-weight: 400;
+      white-space: nowrap;
+      border-right: 1px solid var(--faint);
+    }
+    .jaccard-table td.jac-blank { background: #f3f3f0; }
+    .jac-n {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--mid);
+      line-height: 1.1;
+    }
+
+    /* -- Summary / CS table ------------------------------------------------- */
+    .cs-table {
+      width: 100%;
+      max-width: 700px;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-top: .4rem;
+    }
+    .cs-table th {
+      text-align: left;
+      padding: .3rem .6rem;
+      font-weight: 500;
+      border-bottom: 2px solid var(--faint);
+    }
+    .cs-table td {
+      padding: .3rem .6rem;
+      border-bottom: 1px solid var(--faint);
+      vertical-align: top;
+    }
+    .cs-table tbody tr:last-child td { border-bottom: none; }
+    .cs-table td:first-child { white-space: nowrap; }
+    .cs-table td.muted { color: var(--mid); }
+
+    /* -- Inline citations --------------------------------------------------- */
+    .cite { font-style: italic; text-decoration: none; color: var(--mid); }
+    .cite:hover { color: var(--red); }
+
+    /* -- Map encoding swatches ---------------------------------------------- */
+    .swatch-dot {
+      display: inline-block;
+      border-radius: 50%;
+      vertical-align: middle;
+      margin: 0 3px;
+      border: 1px solid rgba(0,0,0,0.12);
+    }
+    .swatch-bar {
+      display: inline-block;
+      height: 9px;
+      width: 72px;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin: 0 5px;
+    }
+    .swatch-label {
+      font-size: 0.75rem;
+      font-variant: small-caps;
+      letter-spacing: .03em;
+    }
+
+    /* -- Figure caption ----------------------------------------------------- */
+    .fig-caption {
+      font-size: 0.82rem;
+      color: var(--mid);
+      font-style: italic;
+      max-width: 700px;
+      margin: .4rem 0 1.5rem;
+      line-height: 1.4;
+    }
+    .fig-num {
+      font-style: normal;
+      font-weight: 500;
+      color: var(--ink);
+    }
+
+    /* -- Collapsible SI sections -------------------------------------------- */
+    details.si-section { margin: 2rem 0 .6rem; }
+    details.si-section > summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      font-weight: 500;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--mid);
+      padding-bottom: .25rem;
+      border-bottom: 1px solid var(--faint);
+      user-select: none;
+    }
+    details.si-section > summary::-webkit-details-marker { display: none; }
+    details.si-section > summary::after {
+      content: '\25B8';
+      font-size: 0.75rem;
+      color: var(--faint);
+      display: inline-block;
+      transition: transform .15s;
+      transform: rotate(0deg);
+    }
+    details.si-section[open] > summary::after { transform: rotate(90deg); }
+    details.si-section > summary:hover { color: var(--ink); }
+    details.si-section .si-body { padding-top: .6rem; }
+
+    /* -- Notation table (argument documents) -------------------------------- */
+    .notation-table {
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      margin: .75rem 0 1.25rem;
+      max-width: 660px;
+    }
+    .notation-table th {
+      text-align: left;
+      padding: .3rem .7rem;
+      font-weight: 500;
+      border-bottom: 2px solid var(--faint);
+    }
+    .notation-table td {
+      padding: .28rem .7rem;
+      border-bottom: 1px solid var(--faint);
+      vertical-align: top;
+    }
+    .notation-table tbody tr:last-child td { border-bottom: none; }
+    .notation-table td:first-child {
+      font-family: var(--mono);
+      font-size: 0.82em;
+      white-space: nowrap;
+    }
+
+    /* -- Step list (argument documents) ------------------------------------- */
+    .step-list { list-style: none; padding: 0; margin: .75rem 0 1.25rem; max-width: 680px; }
+    .step-list li {
+      display: flex;
+      gap: .9rem;
+      align-items: flex-start;
+      margin-bottom: .9rem;
+      font-size: 0.9rem;
+    }
+    .step-num {
+      flex: 0 0 1.6rem;
+      height: 1.6rem;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.78rem;
+      font-family: var(--mono);
+      font-weight: 500;
+      margin-top: .05em;
+    }
+    .step-text { flex: 1; padding-top: .15em; }
+
+    /* -- Status badges (argument documents) --------------------------------- */
+    .badge {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      padding: .1em .45em;
+      border-radius: 2px;
+      margin-left: .5em;
+      vertical-align: middle;
+    }
+    .badge-todo { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+    .badge-done { background: #d4edda; color: #155724; border: 1px solid #28a745; }
+    .badge-note { background: #e8f0f8; color: var(--blue); border: 1px solid #90aac8; }
+
+    /* -- Figure placeholder (argument documents) ---------------------------- */
+    .fig-placeholder {
+      width: 100%;
+      max-width: 680px;
+      height: 260px;
+      background: #f4f4f0;
+      border: 1px dashed var(--faint);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.82rem;
+      color: var(--mid);
+      font-family: var(--mono);
+      margin: .75rem 0 .4rem;
+    }
+
+    /* -- Footer ------------------------------------------------------------- */
+    footer {
+      margin-top: 4rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--faint);
+      font-size: 0.8rem;
+      color: var(--faint);
+    }
+  </style>
+
+  {% block extra_styles %}{% endblock %}
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+{% block body %}{% endblock %}
+<script>
+(function () {
+  var links = Array.from(document.querySelectorAll('.toc a[href^="#"]'));
+  if (!links.length) return;
+  var targets = links
+    .map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); })
+    .filter(Boolean);
+  function markActive() {
+    var threshold = window.innerHeight * 0.4;
+    var current = targets[0];
+    for (var i = 0; i < targets.length; i++) {
+      if (targets[i].getBoundingClientRect().top <= threshold) current = targets[i];
+    }
+    links.forEach(function (a) {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current.id);
+    });
+  }
+  document.addEventListener('scroll', markActive, { passive: true });
+  markActive();
+})();
+</script>
+</body>
+</html>

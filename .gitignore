@@ -1,0 +1,26 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.python-version
+
+# Virtual environments
+.venv
+
+# Computed pipeline outputs (not source data)
+cache/
+data/
+
+# Generated figures and reports
+images/
+results/
+report/max_kde_diffs.html
+scripts/max_kde_diffs.html
+
+# OS / editor
+.DS_Store
+*.log
+*.tmp

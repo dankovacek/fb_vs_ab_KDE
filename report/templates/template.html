@@ -1,0 +1,1025 @@
+{% extends "templates/base.html" %}
+{% block title %}An empirically grounded kernel bandwidth function for streamflow density estimation &middot; {{ metadata.regions }}{% endblock %}
+
+{% block extra_styles %}
+<style>
+  /* -- Collapsible plot panels -------------------------------------------- */
+  details.plot-panel {
+    border-top: 1px solid var(--faint);
+    margin-top: 1.2rem;
+  }
+  details.plot-panel + details.plot-panel {
+    margin-top: 1.5rem;
+  }
+  details.plot-panel > summary {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45em;
+    cursor: pointer;
+    list-style: none;          /* hide default marker */
+    font-size: 1rem;
+    font-weight: 500;
+    font-family: var(--serif);
+    color: var(--mid);
+    padding: 0.55rem 0 0.35rem;
+    user-select: none;
+  }
+  details.plot-panel > summary::-webkit-details-marker { display: none; }
+  details.plot-panel > summary::before {
+    content: '\25B6';          /* right-pointing triangle */
+    font-size: 0.65em;
+    color: var(--faint);
+    transition: transform 0.18s ease;
+    flex-shrink: 0;
+    margin-top: 0.1em;
+  }
+  details.plot-panel[open] > summary::before {
+    transform: rotate(90deg);
+  }
+  details.plot-panel > summary:hover { color: var(--ink); }
+  details.plot-panel > summary:hover::before { color: var(--mid); }
+  details.plot-panel > .panel-body {
+    padding-top: 0.6rem;
+    padding-bottom: 0.5rem;
+  }
+  details.plot-panel > .panel-body p {
+    margin-bottom: 0.5rem;
+  }
+</style>
+{% endblock %}
+
+{% block bokeh_cdn %}
+  <link  href="https://cdn.bokeh.org/bokeh/release/bokeh-3.8.0.min.css"
+         rel="stylesheet" type="text/css">
+  <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.8.0.min.js"
+          crossorigin="anonymous"></script>
+  <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.8.0.min.js"
+          crossorigin="anonymous"></script>
+  <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-3.8.0.min.js"
+          crossorigin="anonymous"></script>
+{% endblock %}
+
+{% block body %}
+<div class="page-wrap">
+
+  <nav class="toc" aria-label="Contents">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#sec-abstract">Abstract</a></li>
+      <li><a href="#sec-background">Background</a></li>
+      <li><a href="#sec-problem">Problem statement</a></li>
+      <li><a href="#sec-map">Study regions</a></li>
+      <li><a href="#sec-methods">Methodology</a></li>
+      <li><a href="#sec-synthetic">Synthetic validation</a>
+        <ol style="margin-top:0.3em;">
+          <li><a href="#sec-synthetic-scenarios">Baseline scenarios</a></li>
+          <li><a href="#sec-synthetic-separation-sweep">Mode-separation sweep</a></li>
+          <li><a href="#sec-synthetic-spread-sweep">Spread-asymmetry sweep</a></li>
+          <li><a href="#sec-mise-vs-ed">MISE and ED&#178; are not interchangeable</a></li>
+        </ol>
+      </li>
+      <li><a href="#sec-results">Results</a>
+        <ol style="margin-top:0.3em;">
+          <li><a href="#sec-results-bounds">Theoretical validity bounds</a></li>
+          <li><a href="#sec-results-overall">Baseline divergence</a></li>
+          <li><a href="#sec-results-rl-stability">Record-length stability</a></li>
+          <li><a href="#sec-results-stratified">Stratified divergence
+            <ol style="margin-top:0.3em;">
+              <li><a href="#sec-qshift-sensitivity">Full-support quantile-shift sensitivity</a></li>
+            </ol>
+          </a></li>
+          <li><a href="#sec-results-metric-corr">Pairwise metric correlations</a></li>
+          <li><a href="#sec-results-illustrative">Illustrative stations</a></li>
+        </ol>
+      </li>
+      <li><a href="#sec-discussion">Discussion checklist</a></li>
+      <li><a href="#sec-references">References</a></li>
+      <li><a href="#sec-endnote">Note: divergence metrics and the integral duality</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <div class="doc-location">
+      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="14" viewBox="0 0 12 16" fill="currentColor">
+        <path d="M6 0C3.24 0 1 2.24 1 5c0 3.75 5 11 5 11s5-7.25 5-11c0-2.76-2.24-5-5-5zm0 7.5A2.5 2.5 0 1 1 6 2.5a2.5 2.5 0 0 1 0 5z"/>
+      </svg>
+      {{ metadata.regions }}
+    </div>
+
+    <div class="doc-title">
+      <h1>Technical note: an empirically grounded kernel bandwidth function for streamflow density estimation</h1>
+      <p class="doc-subtitle">
+        When does bandwidth choice matter for flow duration curves?
+      </p>
+      <div class="doc-date">{{ metadata.date }}, working note</div>
+    </div>
+
+    <!-- Abstract -->
+    <section id="sec-abstract" class="abstract-block">
+      <h2>Abstract</h2>
+      <ul>
+        <li>Fixed bandwidth KDE with a global scale estimator minimizes MISE under a 
+          Gaussian reference. The embedded normal-reference approximation 
+          \(\int [f''(x)]^2\,dx\) is poor for multimodal densities. 
+          The resulting homoscedastic bandwidth is inconsistent with heteroscedastic
+          streamflow measurement uncertainty even after log-transform.</li>
+        <li>We present an adaptive bandwidth grounded in an approximated hydrometric error model,
+          with a data-spacing floor in log space that keeps each bandwidth from falling below
+          the local observation gap. Compared against Silverman&rsquo;s rule for
+          {{ metadata.n_stations }} stations across {{ metadata.regions }}.</li>
+        <li>Silverman&rsquo;s rule gives MISE within 10&thinsp;% of optimal for log-space
+          skewness \(|s| \le 1.8\) and mode separation \(\le 3\sigma\).
+          Mode separation: 0&thinsp;% of stations exceed \(3\sigma\).
+          Skewness: 3 to 16&thinsp;% of stations exceed \(|s|=1.8\) across regions.
+          For the 84 to 97&thinsp;% within the bound, AB and FB are structurally
+          indistinguishable by all five divergence metrics.
+          For the 3 to 16&thinsp;% outside it, AB applies locally-adaptive smoothing
+          calibrated to measurement uncertainty and observation density.
+          Its OOB bootstrap score is also less sensitive to year composition than FB
+          at these same stations.</li>
+      </ul>
+    </section>
+
+    <!-- 1. Background -->
+    <section id="sec-background">
+      <h2><span class="sec-num">1</span>Background</h2>
+      <p>Placeholder literature to cover:</p>
+      <ul>
+        <li><strong>[PLACEHOLDER]</strong> Non-parametric flow duration curve estimation:
+          KDE and smoothing approaches applied to daily streamflow records.
+          <!-- e.g. Vogel &amp; Fennessey 1994, Smakhtin 2001, Booker &amp; Snelder 2012 -->
+        </li>
+        <li><strong>[PLACEHOLDER]</strong> Fixed-bandwidth KDE: the MISE-optimal bandwidth
+          under a Gaussian reference (Silverman, 1986; Scott, 1992). Justification for the
+          \(n^{-1/5}\) scaling and the normal-reference approximation of
+          \(\int [f''(x)]^2\,dx\).
+        </li>
+        <li><strong>[PLACEHOLDER]</strong> Variable-bandwidth and adaptive KDE: per-observation
+          bandwidths set by local density or sample spacing.
+          <!-- e.g. Abramson 1982, Sain &amp; Scott 1996, Terrell &amp; Scott 1992 -->
+        </li>
+        <li><strong>[PLACEHOLDER]</strong> Streamflow measurement uncertainty and hydrometric
+          standards: WSC/ECCC accuracy categories, rating curve uncertainty at low and high
+          flows, precision floors from tabulated rating curves.
+          <!-- e.g. ECCC 2016, ISO 748 -->
+        </li>
+        <li><strong>[PLACEHOLDER]</strong> FDC regionalization and prediction at ungauged
+          basins: how estimator choice propagates into downstream applications.
+          <!-- e.g. Castellarin et al. 2004, Yokoo &amp; Sivapalan 2011, Worland et al. 2019 -->
+        </li>
+        <li><strong>[PLACEHOLDER]</strong> Large-sample hydrology dataset descriptions:
+          HYSETS (Arsenault et al. 2020), Caravan (Kratzert et al. 2023).
+        </li>
+      </ul>
+    </section>
+
+    <!-- 2. Problem statement -->
+    <section id="sec-problem">
+      <h2><span class="sec-num">2</span>Problem statement</h2>
+      <ul>
+        <li>Daily streamflow is expressed as unit-area runoff
+          (UAR&thinsp;=&thinsp;Q/A, Q in m<sup>3</sup>&thinsp;s<sup>&minus;1</sup>,
+          A in km<sup>2</sup>,
+          units L&thinsp;s<sup>&minus;1</sup>&thinsp;km<sup>&minus;2</sup>).
+          Silverman&rsquo;s rule derives a single global bandwidth by minimizing MISE
+          under a Gaussian reference, using the normal distribution to evaluate the
+          unknown roughness integral \(\int [f''(x)]^2\,dx\). This overestimates the
+          optimal bandwidth in flat regions (small \(|f''|\)) and underestimates it at
+          modes and regime transitions (large \(|f''|\)). Streamflow uncertainty is also
+          heteroscedastic: relative error is highest at low flows (extrapolated ratings,
+          ice) and at extreme high flows (out-of-bank conditions), yet the global
+          bandwidth treats all flow magnitudes equivalently.
+        </li>
+        <li>The adaptive estimator sets a per-observation floor
+          \(h_i = \max\!\bigl(h_\text{Voronoi},\;\ln(1+\varepsilon(q_i))\bigr)\),
+          where \(\varepsilon(q)\) is the piecewise fractional error at flow \(q\)
+          (Figure&nbsp;1) and \(h_\text{Voronoi}\) is the Voronoi cell half-width in
+          log-UAR space. Each bandwidth reflects the local observation gap, not the
+          global scale. The log transform widens gaps in the sparse low-flow tail, and the
+          Voronoi floor widens with them. Caveat: very few low-flow points yield broad,
+          near-uninformative kernels there, so this is not obviously better than Silverman.
+        </li>
+        <li>This study compares the two estimators across {{ metadata.n_stations }}
+          stations ({{ metadata.regions }}) at grid resolutions of 6, 8, and 10 bits
+          to characterise the severity and frequency of divergence across flow regimes,
+          and to identify whether catchment and climate characteristics can predict large
+          divergence.
+        </li>
+      </ul>
+    </section>
+
+    <!-- 2. Study regions -->
+    <section id="sec-map">
+      <h2><span class="sec-num">3</span>Study regions</h2>
+      <p>Station locations coloured by KS (8-bit grid). Darker (yellow) = larger divergence.</p>
+      {{ sections.maps }}
+      <p>Empirical CDFs of catchment characteristics. Legend: region short name + station count (N).
+        Drainage area: log axis. Precipitation: Caravan mean daily &times; 365. Temperature: mean annual from HydroATLAS (&deg;C). Record length: complete hydrological years.</p>
+      {{ sections.attr_cdfs }}
+    </section>
+
+    <!-- 3. Methodology -->
+    <section id="sec-methods">
+      <h2><span class="sec-num">4</span>Methodology</h2>
+      <p class="notation-block">
+        <strong>Notation.</strong>
+        \(X\): UAR observation.
+        \(f(x)\): PDF of \(X\) in log-UAR space.
+        \(F(x) = P(X \le x)\): CDF.
+        \(F^{-1}(p)\): quantile function (inverse CDF).
+        Subscripts AB / FB: adaptive bandwidth (AB) and fixed (Silverman rule of thumb) bandwidth (FB) respectively.
+      </p>
+      <p>
+        KDE in log-UAR space = Gaussian kernel smoothing of log-transformed observations.
+        For \(X \sim \mathrm{LN}(\mu,\sigma)\), \(\ln X \sim \mathcal{N}(\mu,\sigma)\).
+      </p>
+      <p>
+        Silverman&rsquo;s rule (MISE-optimal under Gaussian reference, Silverman 1986 Ch.&nbsp;3):
+        $$h_\text{FB} = 0.9 \min\!\left(\hat{\sigma},\,\frac{\text{IQR}}{1.34}\right) n^{-1/5}$$
+        \(\hat{\sigma}\): sample std dev of log observations. \(\min\): Scott&rsquo;s (1992) heavy-tail robustification.
+      </p>
+      <p>
+        Adaptive estimator: \(h_i = \max(h_\text{Voronoi},\;\ln(1+\varepsilon(q_i)))\).
+        Grid: log-UAR, \([\text{UAR}_\text{min},\,\text{UAR}_\text{max}]\), \(2^b\) bins,
+        \(b \in \{6,8,10\}\). Five divergence measures per station per bitrate:
+      </p>
+      <figure style="display:inline-block; margin:1em 0;">
+        {{ sections.error_model }}
+        <figcaption style="max-width:520px; font-size:0.9em; color:#444;">
+          Figure&nbsp;1. Piecewise relative-error model for adaptive bandwidth floor.
+          Green band: 5&nbsp;% nominal accuracy region (0.1 to 100 m&sup3;/s, ECCC 2016 En37&#8209;464&#8209;2016).
+          Error rises at low flows (poor rating constraint, ice) and very high flows (out-of-bank extrapolation).
+        </figcaption>
+      </figure>
+      <ul>
+          <li>
+          <strong>MISE (mean integrated squared error)</strong>: integrated squared difference
+          between the two KDE density estimates in log-UAR space (log-flow units&#8315;&#185;).
+          $$\mathrm{MISE} = \int \!\left(f_\mathrm{AB}(x) - f_\mathrm{FB}(x)\right)^2 d(\ln x)
+          = \sum_j \frac{\left(p_\mathrm{AB}(x_j) - p_\mathrm{FB}(x_j)\right)^2}{\delta_j}$$
+          where \(\delta_j\) converts probability mass to density.
+          Silverman&rsquo;s rule minimises MISE under a Gaussian reference.
+          Unlike ED&#178;, MISE penalises pointwise density disagreement rather than CDF-gap area, so it
+          is more sensitive to narrow peaks where the two estimators assign very different heights.
+        </li>
+        <li>
+          <strong>KS statistic</strong>: the maximum absolute CDF difference over all grid points \(x_j\).
+          $$D_\text{KS} = \max_j \left| F_\text{AB}(x_j) - F_\text{FB}(x_j) \right|,
+          \quad F(x_j) = \sum_{k \le j} p(x_k)$$
+        </li>
+        <li>
+          <strong>Implied quantile shift</strong>: a practitioner-interpretable
+          translation of any CDF gap into a relative flow change.
+          At bin \(j\) with log-UAR width \(\delta_j\) and probability mass \(p_j\),
+          the local density is \(\hat{f}(x_j) = p_j/\delta_j\).
+          If the two CDFs differ by \(\varepsilon\) at \(x_j\), the first-order
+          approximation (\(\hat{f}\) locally constant) gives the log-space
+          displacement needed to accumulate probability \(\varepsilon\):
+          $$\hat{f}(x_j)\,\Delta(\ln x) \approx \varepsilon
+            \;\Longrightarrow\;
+            \Delta(\ln x) = \varepsilon\,\frac{\delta_j}{p_j}$$
+          Converting to a relative flow change:
+          $$\text{shift\%} = \left(e^{\,\varepsilon\,\delta_j/p_j} - 1\right) \times 100$$
+          Setting \(\varepsilon = D_\text{KS}\) and \(j = j^*\) (the KS-maximum bin)
+          gives the scalar reported in section&thinsp;6.4.6.
+          Because \(j^*\) maximises \(\varepsilon\) rather than the ratio
+          \(\varepsilon/p_j\), a bin with low density and only a marginally smaller
+          CDF gap can yield a substantially larger implied shift.
+          The KS-point shift is therefore a <em>lower bound</em> on the worst-case
+          shift across the support; section&thinsp;6.4.7 presents the full-support sweep.
+        </li>
+        <li>
+          <strong>Wasserstein-1 distance (W&#8321;)</strong>: the total area between the two CDFs
+          measured in log-UAR space (log-flow units).
+          $$W_1 = \sum_j \left| F_\text{AB}(x_j) - F_\text{FB}(x_j) \right| \delta_j$$
+          where \(\delta_j\) is the log-UAR bin width at grid point \(j\).
+          Displayed in % as \(100 \times (\mathrm{e}^{W_1} - 1)\): a value of P% means the
+          observed CDF-gap area equals that produced by scaling all flow values up by P%.
+        </li>
+        <li>
+          <strong>Energy distance squared (ED&#178;)</strong>: the squared L&#178; area between the two CDFs
+          in log-UAR space (log-flow units), on the same scale as W&#8321;.
+          $$\mathrm{ED}^2 = 2\sum_j \left( F_\text{AB}(x_j) - F_\text{FB}(x_j) \right)^2 \delta_j$$
+          Penalises large sustained CDF deviations more than W&#8321; does, because
+          squaring the gap amplifies peaks while leaving small gaps nearly unchanged.
+        </li>
+        <li>
+          <strong>KL divergence (KL)</strong>: bits of information lost when the Silverman PMF
+          is used to approximate the adaptive PMF.  AB is treated as the reference distribution;
+          FB is the approximation under scrutiny.
+          $$D_\text{KL}(\text{AB}\,\|\,\text{FB}) = \sum_j p_\text{AB}(x_j) \log_2 \frac{p_\text{AB}(x_j)}{p_\text{FB}(x_j)}$$
+          A small uniform mixture (\(\delta\)-constrained, \(\delta =\) KLD_DELTA_MAX bits)
+          is applied to both PMFs before evaluation to handle zero bins in either estimator;
+          this floor acts as a precision floor on the probability assigned to any state,
+          and the resulting KL measures the penalty incurred by FB for underspecifying the
+          probability of states where AB concentrates mass.
+          This framing is appropriate when Silverman&rsquo;s conditions are violated: FB
+          over-smooths peaks and troughs that AB resolves, and the KL correctly flags the
+          information cost of that under-specification.
+          Where Silverman&rsquo;s conditions are satisfied, the interpretation is reversed:
+          AB may be over-fitting sampling variability at the scale of individual bins, and
+          the FB smoothing is consistent with MISE-minimisation under the Gaussian reference.
+          In those cases the same \(D_\text{KL}(\text{AB}\,\|\,\text{FB})\) value conflates
+          genuine FB failure with AB roughness, so KL should be read alongside the
+          stratification results in section&thinsp;6.4.
+          High KL with modest KS/W&#8321; indicates the two CDFs are globally close but the
+          PDFs disagree sharply at narrow peaks or inter-modal troughs.
+        </li>
+      </ul>
+    </section>
+
+    <!-- 4. Synthetic validation -->
+    <section id="sec-synthetic">
+      <h2><span class="sec-num">5</span>Synthetic validation</h2>
+      <p style="max-width:760px; line-height:1.75;">
+        All scenarios use \(N = 3650\) samples (10&thinsp;yr &times; 365&thinsp;d) drawn from a
+        finite log-normal mixture \(f(x) = \sum_k w_k \cdot \mathrm{LN}(\mu_k,\sigma_k)\)
+        with fully specified parameters.  All five divergence metrics are computed against
+        \(f_\text{true}\) directly (AB vs truth and FB vs truth), and \(D(\text{AB},\text{FB})\)
+        is computed between the two estimators so that agreement and disagreement can be
+        distinguished from accuracy.
+      </p>
+
+      <!-- 5.1 Baseline scenarios -->
+      <section id="sec-synthetic-scenarios" style="margin-top:1.4em;">
+        <h3>5.1&ensp;Baseline scenarios</h3>
+        <p style="max-width:760px; line-height:1.75;">
+          Two controlled distributions establish the behaviour of AB and FB where the
+          ground truth is known exactly.
+        </p>
+        <ul style="max-width:760px; line-height:1.75;">
+          <li><strong>Scenario 1 (asymmetric bimodal).</strong>
+            \(w_1=0.35\), \(\mu_1=\ln(0.3)\,\mathrm{m^3\,s^{-1}}\), \(\sigma_1=0.20\);
+            \(w_2=0.65\), \(\mu_2=\ln(30)\,\mathrm{m^3\,s^{-1}}\), \(\sigma_2=0.90\).
+            No measurement artifacts.  Tests bimodal recovery with a 4.5&times; spread
+            contrast between components.
+          </li>
+          <li><strong>Scenario 2 (rating-curve precision floor).</strong>
+            \(w_1=0.25\), \(\mu_1=\ln(0.02)\,\mathrm{m^3\,s^{-1}}\), \(\sigma_1=0.30\)
+            (low-Q pool inside the high-error zone);
+            \(w_2=0.75\), \(\mu_2=\ln(0.5)\,\mathrm{m^3\,s^{-1}}\), \(\sigma_2=0.10\)
+            (narrow high-flow mode).
+            \(Q < 0.1\,\mathrm{m^3\,s^{-1}}\) is quantized to the nearest
+            \(0.01\,\mathrm{m^3\,s^{-1}}\) step (rating-curve resolution floor).
+            The narrow mode forces a small Silverman \(h\), which then preserves
+            quantization spikes in the low-Q tail; the adaptive floor smooths them.
+            Orange shading marks the high-error zone (\(Q < 0.1\,\mathrm{m^3\,s^{-1}}\)).
+          </li>
+        </ul>
+        {% if sections.synthetic_scenarios is defined %}
+        {{ sections.synthetic_scenarios }}
+        {% endif %}
+      </section>
+
+      <!-- 5.2 Mode-separation sweep -->
+      <section id="sec-synthetic-separation-sweep" style="margin-top:2em;">
+        <h3>5.2&ensp;Mode-separation sweep</h3>
+        <p style="max-width:760px; line-height:1.75;">
+          Component spreads (\(\sigma_1 = \sigma_2 = 0.55\)) and weights
+          (\(w_1 = w_2 = 0.5\)) are held constant; only the log-space separation
+          \(\Delta\mu = \mu_2 - \mu_1\) is varied from 0 to 5 in six equal steps.
+          At \(\Delta\mu = 0\) the two components coincide, collapsing to a single
+          log-normal where AB and FB are expected to agree (lower bound).
+          As \(\Delta\mu\) grows the distribution becomes increasingly bimodal and
+          Silverman&rsquo;s bandwidth is stretched across the widening inter-modal gap,
+          over-smoothing both modes simultaneously until the error approaches an upper
+          plateau.
+        </p>
+        {% if sections.synthetic_separation_sweep is defined %}
+        {{ sections.synthetic_separation_sweep }}
+        {% endif %}
+      </section>
+
+      <!-- 5.3 Spread-asymmetry sweep -->
+      <section id="sec-synthetic-spread-sweep" style="margin-top:2em;">
+        <h3>5.3&ensp;Spread-asymmetry sweep</h3>
+        <p style="max-width:760px; line-height:1.75;">
+          Silverman (1986) addresses skewness and bimodal separation as the two conditions
+          that bound the MISE optimality of his rule of thumb.  This sweep identifies a
+          third condition: asymmetry in the <em>spread</em> of the two components.  When
+          one component is substantially broader than the other, the fixed bandwidth is
+          attracted to the narrower mode and over-smooths the broader tail, even when the
+          modes are not strongly separated.
+        </p>
+        <p style="max-width:760px; line-height:1.75;">
+          Component means (\(\mu_1 = \ln(2)\,\mathrm{m^3\,s^{-1}}\),
+          \(\mu_2 = \ln(8)\,\mathrm{m^3\,s^{-1}}\); separation \(\approx 2.5\sigma\))
+          and weights (\(w_1 = w_2 = 0.5\)) are fixed so that at ratio 1:1 Silverman
+          performs reasonably and the asymmetry failure mode emerges cleanly as the
+          ratio grows.
+          The ratio \(\sigma_1 / \sigma_2\) is swept from 1:1 (symmetric spread) to
+          12:1 on a log scale in six steps, with the harmonic mean of
+          \((\sigma_1, \sigma_2)\) held constant so that total mixture spread is
+          comparable across panels.  Extending the sweep to 12:1 allows the score
+          curves to approach their upper plateau.
+        </p>
+        {% if sections.synthetic_spread_sweep is defined %}
+        {{ sections.synthetic_spread_sweep }}
+        {% endif %}
+      </section>
+
+      <!-- 5.4 MISE vs. ED illustrations -->
+      <section id="sec-mise-vs-ed" style="margin-top:2em;">
+        <h3>5.4&ensp;MISE and ED are not interchangeable</h3>
+        <p style="max-width:760px; line-height:1.75;">
+          MISE and ED integrate over different quantities:
+          $$\text{MISE} = \sum_j \frac{(\hat{f}_j - f_j)^2}{\delta_j},
+            \qquad
+            \text{ED}^2  = 2\sum_j (\hat{F}_j - F_j)^2\,\delta_j$$
+          MISE sums squared PMF residuals \((\hat{f} - f)\).
+          ED sums squared CDF gaps \((\hat{F} - F)\).
+          Because a local density error accumulates in the CDF but a distant
+          error of equal magnitude does not, the two metrics can rank estimators
+          in opposite order.
+        </p>
+        <p style="max-width:760px; line-height:1.75;">
+          Each column below uses the Scenario 2 bimodal distribution
+          (low-Q pool plus narrow high-Q peak, the same true PMF as section 5.1)
+          as the reference.
+          The top panel overlays two perturbed estimators on the true distribution.
+          The middle panel shows the PMF residual \((\hat{f} - f)\), the pointwise
+          integrand of MISE.
+          The bottom panel shows the CDF gap \((\hat{F} - F)\), the pointwise
+          integrand of ED.
+          The score table above the figures reports MISE and ED&sup2; for each
+          estimator against the true distribution.
+        </p>
+        <p style="max-width:760px; line-height:1.75;">
+          <strong>Example 1</strong> holds MISE constant while varying ED.
+          Both A and B remove mass &epsilon; from the narrow high-Q peak.
+          A deposits it at the adjacent bin. B deposits it at the low-Q pool,
+          about 40 bins away.
+          The PMF residuals are equal in magnitude so MISE is unchanged.
+          The CDF gap for B persists across the full inter-modal distance,
+          making ED about 6.3&times; larger.
+        </p>
+        <p style="max-width:760px; line-height:1.75;">
+          <strong>Example 2</strong> holds ED approximately constant while varying MISE.
+          Both C and D move mass M from the narrow peak to the low-Q pool, so the
+          CDF gap profiles are nearly identical (ED within about 4&thinsp;%).
+          C deposits the mass at a single bin (spike). D spreads the same mass over
+          five adjacent bins. MISE penalises C&#x2019;s height concentration 5&times; more
+          than D&#x2019;s spread.
+        </p>
+        {% if sections.mise_vs_ed_illustration is defined %}
+        {{ sections.mise_vs_ed_illustration }}
+        {% endif %}
+      </section>
+
+    </section>
+
+    <!-- 5. Results -->
+    <section id="sec-results">
+      <h2><span class="sec-num">6</span>Results</h2>
+
+      <!-- 6.1 Theoretical validity bounds -->
+      <section id="sec-results-bounds" style="margin-top:1.4em;">
+        <h3>6.1&ensp;Silverman theoretical validity bounds</h3>
+        <p style="max-width:760px; line-height:1.75;">
+          Silverman (1986, &sect;3.4) guarantees that the rule-of-thumb bandwidth gives
+          MISE within 10&thinsp;% of optimal for log-space skewness \(|s| \le 1.8\)
+          and mode separation \(\le 3\sigma\).
+          Mode separation is not a binding constraint: 0&thinsp;% of stations
+          across all regions exceed the \(3\sigma\) threshold.
+          Skewness is binding for a minority: 3 to 16&thinsp;% of stations
+          exceed \(|s|=1.8\) depending on region.
+          The four panels below characterize the distributional-shape landscape of the
+          station sample relative to these two bounds.
+        </p>
+        {% if sections.silverman_bounds is defined %}
+        <p style="max-width:760px; line-height:1.75;">
+          Peak separation (Panel B) is normalised by the mean component &sigma; using
+          the valley-split method, not by the global distribution sigma.
+          Panel C shows spread asymmetry, an empirical failure mode not covered by
+          Silverman (1986): when the two mixture components have very different spreads,
+          a fixed bandwidth over-smooths the broader tail.
+          Bimodality is tested via the Hartigan &amp; Hartigan (1985) dip test on raw
+          daily log-UAR observations (no bandwidth parameter), applied to all three
+          regions (CAMELS-BR, CAMELS-GB, and HYSETS).
+        </p>
+        {{ sections.silverman_bounds }}
+        {% endif %}
+      </section>
+
+      <!-- 6.2 Baseline divergence -->
+      <section id="sec-results-overall" style="margin-top:2em;">
+        <h3>6.2&ensp;Baseline divergence</h3>
+        <p style="max-width:760px; line-height:1.75;">
+          ECDF of each metric across all {{ metadata.n_stations }} stations at 6, 8, 10 bits.
+          Filled circles: median.
+          Rows: MISE, KS / W&#8321;, ED, KL.
+          X-axes linked across regions within each row.
+          These pooled distributions establish the overall scale of divergence before
+          conditioning on the Silverman validity bound.
+        </p>
+        {{ sections.ecdfs }}
+      </section>
+
+      <!-- 6.3 Record-length stability -->
+      {% if sections.record_length_stability is defined %}
+      <section id="sec-results-rl-stability" style="margin-top:2em;">
+        <h3>6.3&ensp;Record-length stability</h3>
+        <p style="max-width:760px; line-height:1.75;">
+          Longer records narrow Voronoi half-widths, pulling adaptive bandwidths
+          toward the Silverman global scale; shorter records leave large inter-observation
+          gaps that the adaptive estimator must bridge with wider kernels.
+          Each panel shows ECDFs of one divergence metric split at the global median
+          record length (dashed = short records, solid = long records).
+          Systematic separation between strata indicates that divergence between the
+          two estimators depends partly on the density of the observation record,
+          independent of the distributional shape conditions in section&nbsp;6.1.
+        </p>
+        {{ sections.record_length_stability }}
+      </section>
+      {% endif %}
+
+      <!-- 6.4 Stratified divergence -->
+      <section id="sec-results-stratified" style="margin-top:2em;">
+        <h3>6.4&ensp;Stratified divergence by Silverman validity conditions</h3>
+        <p style="max-width:760px; line-height:1.75;">
+          Four complementary stratification schemes are shown.
+          <strong>Rule Set A</strong> (section 6.4.1) uses Silverman&rsquo;s
+          documented conditions: log-space skewness and bimodal separation.
+          <strong>Rule Set B</strong> (section 6.4.2) uses an empirically identified third
+          condition not covered by Silverman (1986): asymmetry in the spread of the two
+          mixture components.  When one component is much broader than the other, the fixed
+          bandwidth is attracted to the narrower mode and over-smooths the broader tail.
+          This condition is quantified as
+          \(\max(\sigma_\text{left}, \sigma_\text{right}) / \min(\sigma_\text{left}, \sigma_\text{right})\)
+          and is evaluated only for bimodal stations (n_peaks&thinsp;&ge;&thinsp;2; dip test
+          p&thinsp;&lt;&thinsp;0.05 where available).
+          <strong>Rule Set C</strong> (section 6.4.4) flags stations where &ge;&thinsp;{{ (bin_conc_threshold * 100) | int }}&thinsp;%
+          of the observed PMF mass falls into {{ bin_conc_n_bins }} or fewer grid cells, identifying records
+          where the KDE is effectively smoothing a near-Dirac comb.
+          <strong>Rule Set D</strong> (section 6.4.5) combines all five criteria simultaneously.
+        </p>
+
+        <h4>6.4.1&ensp;Rule Set A: divergence by skewness and separation</h4>
+        <p style="max-width:760px; line-height:1.75;">
+          Solid: within Silverman bounds (|s|&thinsp;&lt;&thinsp;1.8 and separation&thinsp;&le;&thinsp;3&thinsp;&sigma;).
+          Dashed: outside.  Rows = regions, columns = metrics.
+        </p>
+
+        {% if sections.skew_stratified_divergence is defined %}
+        {{ sections.skew_stratified_divergence }}
+        {% if sections.dotwhisker_a is defined %}
+        <p style="max-width:820px;line-height:1.6;font-size:0.88em;color:#555;margin-top:0.6em;">
+          Bootstrap median (filled circle) and 95&thinsp;% CI (whisker) per group and metric.
+          Solid fill: within Silverman bounds. Open circle: outside.
+          Colour encodes region. Thin grey vertical line = population median.
+        </p>
+        {{ sections.dotwhisker_a }}
+        {% endif %}
+        {% if bstrap_table_a %}
+        <details style="margin-top:1em;max-width:820px;">
+          <summary style="cursor:pointer;font-family:var(--serif);font-size:0.95rem;color:var(--mid);">Bootstrap group medians and 95&thinsp;% CI: Rule Set A (table)</summary>
+          <p style="max-width:820px;line-height:1.7;font-size:0.9em;color:#555;margin-top:0.4em;">
+            Each cell shows the bootstrap median and 95&thinsp;% percentile CI
+            ({{ 2000 }}&thinsp;resamples).
+            &ldquo;Separated&rdquo; means the two CIs do not overlap, indicating the
+            group difference exceeds sampling variability at this confidence level.
+          </p>
+          {{ bstrap_table_a }}
+        </details>
+        {% endif %}
+        {% endif %}
+
+        {% if sections.spread_asymmetry_stratified_divergence is defined %}
+        <h4 style="margin-top:2em;">6.4.2&ensp;Rule Set B: divergence by spread asymmetry (bimodal stations only)</h4>
+        <p style="max-width:820px; line-height:1.75;">
+          Bimodal stations are identified using two independent criteria applied in
+          sequence.
+          <strong>(1) KDE peak structure:</strong> the AB KDE PMF is searched for peaks
+          with prominence &ge;&thinsp;0.005 (catching modes with as little as ~2&thinsp;%
+          of total PMF mass) using <code>scipy.signal.find_peaks</code>.  Any station
+          with at least two detected peaks is considered structurally bimodal.
+          <strong>(2) Hartigan &amp; Hartigan (1985) dip test</strong> applied to the
+          raw daily log-UAR sample (no bandwidth parameter, testing the null hypothesis of
+          unimodality at p&thinsp;&lt;&thinsp;0.05).  Where the dip test is
+          available, both criteria must be satisfied.  Where raw daily sample files are
+          absent (HYSETS), the KDE criterion alone is used and is noted accordingly.
+        </p>
+        {% if bimodality_stats is defined %}
+        <p style="max-width:820px; line-height:1.75;">
+          Across all regions pooled (8-bit grid,
+          N&thinsp;=&thinsp;{{ bimodality_stats.pooled.n_total }} stations):
+          <strong>{{ bimodality_stats.pooled.n_gate }}
+          ({{ bimodality_stats.pooled.pct_gate }}&thinsp;%)</strong> pass the bimodal
+          gate.
+          Of those, {{ bimodality_stats.pooled.n_asym_out }}
+          ({{ bimodality_stats.pooled.pct_asym_out }}&thinsp;%) have spread asymmetry
+          &gt;&thinsp;{{ bimodality_stats.threshold | int }}&times;.
+          Per-region: {% for r, st in bimodality_stats.by_region.items() %}
+            {{ r }} {{ st.n_gate }}/{{ st.n_total }}
+            ({{ st.pct_gate }}&thinsp;%){% if not loop.last %},{% endif %}
+          {% endfor %}.
+          For all three regions, a station must be confirmed bimodal by both the peak
+          detector and the dip test (p&thinsp;&lt;&thinsp;0.05).
+          Where bimodal is NaN for an individual station (sample too short for the dip
+          test), the peak detector alone is used as a fallback.
+        </p>
+        {% endif %}
+        <p style="max-width:820px; line-height:1.75;">
+          Spread asymmetry is quantified as
+          \(\max(\sigma_\text{left},\,\sigma_\text{right})\,/\,\min(\sigma_\text{left},\,\sigma_\text{right})\),
+          where \(\sigma_\text{left}\) and \(\sigma_\text{right}\) are the PMF-weighted
+          standard deviations of the left and right components respectively, computed by
+          the same valley-split method used for peak separation.
+          Solid (black): asymmetry &le;&thinsp;{{ spread_asym_threshold | default('3') | int }}&times;
+          (components have similar spread).
+          Dashed (black): asymmetry &gt;&thinsp;{{ spread_asym_threshold | default('3') | int }}&times;
+          (one component substantially broader than the other).
+          The threshold is set from synthetic validation (section&nbsp;5); a ratio of
+          {{ spread_asym_threshold | default('3') | int }}&times; corresponds to the point
+          in the synthetic sweep where the FB KS divergence against truth begins to
+          separate materially from the AB divergence.
+        </p>
+        {{ sections.spread_asymmetry_stratified_divergence }}
+        {% if sections.dotwhisker_b is defined %}
+        <p style="max-width:820px;line-height:1.6;font-size:0.88em;color:#555;margin-top:0.6em;">
+          Bootstrap median (filled circle) and 95&thinsp;% CI (whisker) per group and metric.
+          Solid fill: asymmetry &le;&thinsp;{{ spread_asym_threshold | default(3) | int }}&times;. Open circle: asymmetric.
+          Colour encodes region.
+        </p>
+        {{ sections.dotwhisker_b }}
+        {% endif %}
+        {% if bstrap_table_b %}
+        <details style="margin-top:1em;max-width:820px;">
+          <summary style="cursor:pointer;font-family:var(--serif);font-size:0.95rem;color:var(--mid);">Bootstrap group medians and 95&thinsp;% CI: Rule Set B (table)</summary>
+          <p style="max-width:820px;line-height:1.7;font-size:0.9em;color:#555;margin-top:0.4em;">
+            Base population: all stations with finite log-space skewness (same as
+            Rule Set A).  Group A includes unimodal stations (NaN spread asymmetry)
+            and bimodal stations whose component &sigma;-ratio does not exceed the
+            threshold; group B is the complement.
+          </p>
+          {{ bstrap_table_b }}
+        </details>
+        {% endif %}
+        {% endif %}
+
+        {% if sections.bin_concentration is defined %}
+        <h4 id="sec-results-bin-concentration" style="margin-top:2em;">6.4.3&ensp;Mass concentration into too few bins</h4>
+        <p style="max-width:820px; line-height:1.75;">
+          An artifact not represented in the synthetic sweep arises when a station&rsquo;s
+          observed flow record produces a PMF where the bulk of the total probability mass
+          falls into just a handful of grid cells.  This happens in discretely quantized
+          records (e.g. HYSETS stations whose daily flow values repeat at a small set of
+          rounded levels) and in very short records where the empirical distribution is
+          nearly concentrated on one or two flow magnitudes.  When {{ bin_conc_n_bins }} or fewer bins hold
+          a large fraction of the total mass, the KDE is effectively being asked to smooth
+          a near-Dirac comb, and the Silverman bandwidth (derived from a Gaussian
+          reference) is poorly suited to that task.
+        </p>
+        <p style="max-width:820px; line-height:1.75;">
+          Each panel below shows the empirical CDF of
+          <em>top-{{ bin_conc_n_bins }} mass</em>, the sum of the {{ bin_conc_n_bins }} largest PMF values for each
+          station, computed from the observed histogram (<code>pmf_obs</code>).
+          A value near zero (left side, H₀) means mass is spread broadly across bins;
+          a value near one (right tail) means that {{ bin_conc_n_bins }} or fewer cells account for nearly
+          all the observed probability mass.  Each panel corresponds to one bitrate
+          (6, 8, and 10 bits respectively), and each line is one region.
+          The dashed vertical marker is at {{ bin_conc_threshold }} ({{ (bin_conc_threshold * 100) | int }}&thinsp;% of the total mass in &le;&thinsp;{{ bin_conc_n_bins }} cells).
+        </p>
+        {{ sections.bin_concentration }}
+        {% endif %}
+
+        {% if sections.bin_concentration_stratum is defined %}
+        <h4 style="margin-top:2em;">6.4.4&ensp;Rule Set C: divergence by bin concentration</h4>
+        <p style="max-width:820px; line-height:1.75;">
+          A station is flagged as <em>concentrated</em> when &ge;&thinsp;{{ (bin_conc_threshold * 100) | int }}&thinsp;% of its
+          total observed PMF mass (8-bit grid) falls into {{ bin_conc_n_bins }} or fewer bins.
+          This condition is observed in CAMELS-BR and HYSETS but is nearly absent in
+          CAMELS-GB.
+          <strong>Solid</strong> lines show stations where mass is spread broadly
+          (top-{{ bin_conc_n_bins }} mass &lt;&thinsp;{{ bin_conc_threshold }});
+          <strong>dashed</strong> lines show stations
+          where the rule is triggered (top-{{ bin_conc_n_bins }} mass &ge;&thinsp;{{ bin_conc_threshold }}).
+          If divergence between AB and FB is systematically higher for the dashed group,
+          bin concentration is an independent driver of KDE disagreement beyond the
+          skewness and bimodality conditions identified in sections 6.4.1 and 6.4.2.
+        </p>
+        {{ sections.bin_concentration_stratum }}
+        {% if sections.dotwhisker_c is defined %}
+        <p style="max-width:820px;line-height:1.6;font-size:0.88em;color:#555;margin-top:0.6em;">
+          Bootstrap median (filled circle) and 95&thinsp;% CI (whisker) per group and metric.
+          Solid fill: mass spread broadly (top-{{ bin_conc_n_bins }} &lt;&thinsp;{{ bin_conc_threshold }}).
+          Open circle: concentrated. Colour encodes region.
+        </p>
+        {{ sections.dotwhisker_c }}
+        {% endif %}
+        {% if bstrap_table_c %}
+        <details style="margin-top:1em;max-width:820px;">
+          <summary style="cursor:pointer;font-family:var(--serif);font-size:0.95rem;color:var(--mid);">Bootstrap group medians and 95&thinsp;% CI: Rule Set C (table)</summary>
+          <p style="max-width:820px;line-height:1.7;font-size:0.9em;color:#555;margin-top:0.4em;">
+            Group A (spread): top-{{ bin_conc_n_bins }} bin mass
+            &lt;&thinsp;{{ bin_conc_threshold }}.  Group B (concentrated):
+            top-{{ bin_conc_n_bins }} bin mass &ge;&thinsp;{{ bin_conc_threshold }}.
+            Stations with missing concentration data are counted in group A.
+          </p>
+          {{ bstrap_table_c }}
+        </details>
+        {% endif %}
+        {% endif %}
+
+        {% if sections.combined_stratum_divergence is defined %}
+        <h4 style="margin-top:2em;">6.4.5&ensp;Rule Set D: all five criteria combined</h4>
+        <p style="max-width:820px; line-height:1.75;">
+          Each station is assessed against five criteria simultaneously.
+          <strong>Solid</strong> stations pass all five:
+          |s|&thinsp;&lt;&thinsp;{{ skew_threshold | default('1.8') }},
+          peak separation&thinsp;&le;&thinsp;{{ peak_sep_threshold | default('3') }}&thinsp;&sigma;
+          (or unimodal),
+          spread asymmetry&thinsp;&le;&thinsp;{{ spread_asym_threshold | default('2') }}&times;
+          (or unimodal),
+          top-{{ bin_conc_n_bins }} bin mass&thinsp;&lt;&thinsp;{{ bin_conc_threshold }} (or concentration data unavailable), and
+          zero-flow fraction&thinsp;=&thinsp;0.
+          <strong>Dashed</strong> stations fail at least one criterion, including
+          any station where zero-flow fraction data are unavailable (the favourable
+          condition cannot be confirmed).
+          This composite gate isolates the subset where FB and AB are expected to differ
+          most. If the two ECDF curves are still close for the solid group, the five
+          criteria together are insufficient to explain the lack of separation.
+        </p>
+        {{ sections.combined_stratum_divergence }}
+        {% endif %}
+
+        {% if 'qshift_combined' in sections %}
+        <h4 style="margin-top:2em;">6.4.6&ensp;Quantile-shift summary</h4>
+        <p style="max-width:820px; line-height:1.7;">
+          All panels translate CDF gaps into implied flow-percentage shifts
+          (see derivation in section&thinsp;4).
+          <strong>Left:</strong> ECDFs of the KS-point implied shift
+          \(\text{shift\%} = (e^{D_\text{KS}\,\delta_{j^*}/p_{j^*}}-1)\times 100\),
+          evaluated at the max-KS bin \(j^*\); this is a lower bound on the
+          worst-case shift across the full support.
+          AB = dashed, FB = solid, one colour per region.
+          <strong>Centre:</strong> ECDFs of the maximum implied shift over all bins
+          using the AB (adaptive) density as the basis; one line per region.
+          <strong>Right:</strong> same for the FB (Silverman) density basis.
+          The rightward displacement of the centre and right panels relative to
+          the left panel quantifies how much the KS-point lower bound is exceeded.
+          All panels share the same x-axis range.
+        </p>
+        {{ sections.qshift_combined }}
+        {% endif %}
+
+        {% if 'qshift_sensitivity' in sections %}
+        <h4 id="sec-qshift-sensitivity" style="margin-top:2em;">6.4.7&ensp;Full-support quantile-shift sensitivity</h4>
+        <p style="max-width:820px; line-height:1.7;">
+          At each bin \(j\) the implied shift is evaluated using the AB (adaptive)
+          density as the reference:
+          \(\text{shift}_j = (e^{|\Delta F_j|\,\delta_j/\hat{f}^{AB}_j}-1)\times 100\).
+          This is the <em>precision-floor</em> interpretation: the minimum displacement
+          consistent with the AB&ndash;FB CDF disagreement, using the most permissive
+          density estimate as the denominator.
+          Each panel sweeps all 256 bins for every station at 8-bit resolution
+          and shows the cross-station distribution of that shift as a function of UAR.
+          The shaded band spans the 2.5th&ndash;97.5th percentile across stations;
+          the bold line is the median.
+          Values above 1&thinsp;000&thinsp;% arise where \(\hat{f}^{AB}_j \to 0\)
+          (deep tails or inter-modal troughs with negligible density) and are clipped
+          at the red dashed line; they are artefacts of vanishing density, not
+          physically meaningful flow displacements.
+          Elevated shift in the body of the distribution identifies where on the
+          flow support bandwidth choice most strongly affects quantile estimates,
+          and demonstrates that the KS-point shift is a lower bound on a profile
+          that can be substantially larger across the full support.
+        </p>
+        {{ sections.qshift_sensitivity }}
+        {% endif %}
+
+        {% if 'isd_paradox' in sections %}
+        <h4 style="margin-top:2em;">6.4.8&ensp;Large ISD within Silverman bounds</h4>
+        <p style="max-width:820px; line-height:1.75;">
+          The three stations below have the largest
+          \(\mathrm{ISD}(\hat{f}_\mathrm{AB},\hat{f}_\mathrm{FB})\) among all stations
+          that <em>pass</em> both Silverman validity criteria:
+          \(|\gamma_1| < {{ skew_threshold | default('1.8') }}\) (log-space skewness)
+          and mode separation \(\Delta\mu \le {{ peak_sep_threshold | default('3') }}\,\sigma\)
+          (or unimodal).
+          Satisfying these conditions gives Silverman&rsquo;s strongest theoretical
+          assurance that \(\hat{f}_\mathrm{FB}\) will be near-optimal relative to the
+          true density.  That assurance, however, concerns optimality against truth,
+          not agreement between the two estimators.
+          Even with all criteria satisfied, \(\hat{f}_\mathrm{AB}\) and
+          \(\hat{f}_\mathrm{FB}\) can still assign materially different probability
+          mass to specific flow ranges.  Annotations show \(\gamma_1\) (skewness) and
+          \(\Delta\mu\) (peak separation, or &ldquo;unimodal&rdquo;) with a
+          &check;&thinsp;PASS badge confirming that the criterion is satisfied.
+          The practical implication is that passing Silverman&rsquo;s criteria does not
+          allow a practitioner to infer that the choice of bandwidth rule is inconsequential.
+        </p>
+        {{ sections.isd_paradox }}
+        {% endif %}
+      </section>
+
+      <!-- 6.5 Pairwise metric correlations -->
+      <section id="sec-results-metric-corr" style="margin-top:2em;">
+        <h3>6.5&ensp;Pairwise metric correlations</h3>
+        <p style="max-width:760px; line-height:1.75;">
+          Left: Pearson product-moment correlation between each pair of divergence metrics
+          (pooled across all regions, 8-bit grid). Right: Kendall rank correlation (&#x1D70F;) for the same pairs.
+          Only the lower triangle is shown. A value near 1 indicates that the two metrics
+          rank stations nearly identically; divergence from 1 indicates cases where one
+          metric is sensitive to structure that the other does not weight.
+        </p>
+        {% if sections.metric_corr_heatmaps is defined %}
+        {{ sections.metric_corr_heatmaps }}
+        {% endif %}
+      </section>
+
+      <!-- 6.6 Illustrative stations -->
+      <section id="sec-results-illustrative" style="margin-top:2em;">
+        <h3>6.6&ensp;Illustrative stations</h3>
+        <details class="plot-panel">
+          <summary>Selected extreme stations by divergence metric (8-bit grid)</summary>
+          <div class="panel-body">
+            <p>Two stations per metric, chosen from each metric&rsquo;s per-region top-10.
+              Light blue: histogram. Purple: adaptive KDE. Dashed pink: FB.
+              Grey dashed line: \(Q=10^{-4}\,\mathrm{m^3\,s^{-1}}\) as UAR (detection floor).</p>
+            {{ sections.worst10 }}
+          </div>
+        </details>
+
+        <details class="plot-panel">
+          <summary>Median-score stations by KS (8-bit grid)</summary>
+          <div class="panel-body">
+            <p>Stations closest to median KS per region. Same conventions as above.</p>
+            {{ sections.median5 }}
+          </div>
+        </details>
+      </section>
+
+    </section>
+
+    <!-- 7. Sampling stability (OOB) -->
+
+    <!-- 8. Discussion checklist -->
+    <section id="sec-discussion">
+      <h2><span class="sec-num">8</span>Discussion checklist</h2>
+      <ul>
+        <li>KS increases with bitrate? &rarr; estimators disagree at finer scales, coarser grids mask it.</li>
+        <li>Worst-KS stations perennial or ephemeral? Ephemeral: many zero-flow days clipped to min UAR;
+          both CDFs concentrated near lower bound, may amplify or suppress differences.</li>
+        <li>Sharper adaptive peaks where observations repeat? Frozen-flow: many identical daily values.
+          Voronoi floor widens kernels there; Silverman smooths globally, may spread mass away from true cluster.</li>
+        <li>Silverman systematically over-smoothed in low-flow tail? PDFs disagreeing mainly at low UAR
+          &rarr; Silverman over-spreading mass below the measurement uncertainty floor.</li>
+        <li>Divergence decreases with record length? Longer records shrink Voronoi half-widths,
+          pulling adaptive bandwidths toward Silverman in dense regions.</li>
+        <li>CDFs agree in bulk, diverge only at tails? Tail divergence matters most for
+          flood/drought quantile estimation where small CDF gaps = large return-level shifts.</li>
+        <li>KS max in high \(|f''(x)|\) regions? Silverman most wrong where curvature deviates
+          from Gaussian reference. Compute \(|\hat{f}''(x_{j^*})|\) at max-KS bin to test.</li>
+        <li>High-KL/low-KS: CDFs close globally, PDFs disagree sharply at localized bins
+          (sparse tail, inter-modal trough where Silverman spreads mass away).
+          High-KS/low-KL: broad CDF shift, no sharp PMF redistribution. Different diagnostic paths.</li>
+        <li>Define severity threshold (e.g. KS &gt; 0.05 or quantile shift &gt; 10%);
+          report fraction of stations exceeding it per region.</li>
+      </ul>
+    </section>
+
+    <!-- 9. References -->
+    <section id="sec-references">
+      <h2><span class="sec-num">9</span>References</h2>
+      <ol class="ref-list">
+        <li id="ref-eccc2016">
+          Environment and Climate Change Canada (ECCC). (2016).
+          <em>Guidelines for hydrometric data quality review</em>
+          (En37&#8209;464&#8209;2016). Gatineau, QC: ECCC.
+        </li>
+        <li id="ref-scott1992">
+          Scott, D.&nbsp;W. (1992).
+          <em>Multivariate density estimation: Theory, practice, and visualization</em>.
+          Wiley.
+        </li>
+        <li id="ref-silverman1986">
+          Silverman, B.&nbsp;W. (1986).
+          <em>Density estimation for statistics and data analysis</em>.
+          Chapman and Hall.
+        </li>
+        <li id="ref-szekely2013">
+          Sz&#233;kely, G.&nbsp;J., &amp; Rizzo, M.&nbsp;L. (2013).
+          Energy statistics: A class of statistics based on distances.
+          <em>Journal of Statistical Planning and Inference</em>, 143(8), 1249 to 1272.
+        </li>
+        <li id="ref-abramson1982"><strong>[PLACEHOLDER]</strong>
+          Abramson, I.&nbsp;S. (1982).
+          On bandwidth variation in kernel estimates: a square root law.
+          <em>Annals of Statistics</em>, 10(4), 1217 to 1223.
+        </li>
+        <li id="ref-sain1996"><strong>[PLACEHOLDER]</strong>
+          Sain, S.&nbsp;R., &amp; Scott, D.&nbsp;W. (1996).
+          On locally adaptive density estimation.
+          <em>Journal of the American Statistical Association</em>, 91(436), 1525 to 1534.
+        </li>
+        <li id="ref-vogel1994"><strong>[PLACEHOLDER]</strong>
+          Vogel, R.&nbsp;M., &amp; Fennessey, N.&nbsp;M. (1994).
+          Flow-duration curves I: New interpretation and confidence intervals.
+          <em>Journal of Water Resources Planning and Management</em>, 120(4), 485 to 504.
+        </li>
+        <li id="ref-smakhtin2001"><strong>[PLACEHOLDER]</strong>
+          Smakhtin, V.&nbsp;U. (2001).
+          Low flow hydrology: a review.
+          <em>Journal of Hydrology</em>, 240(3 and 4), 147 to 186.
+        </li>
+        <li id="ref-arsenault2020"><strong>[PLACEHOLDER]</strong>
+          Arsenault, R., et al. (2020).
+          A comprehensive, multisource database for hydrometeorological modeling of
+          14,425 North American watersheds.
+          <em>Scientific Data</em>, 7, 243.
+        </li>
+        <li id="ref-kratzert2023"><strong>[PLACEHOLDER]</strong>
+          Kratzert, F., et al. (2023).
+          Caravan &ndash; a community dataset for large-sample hydrology.
+          <em>Scientific Data</em>, 10, 61.
+        </li>
+      </ol>
+    </section>
+
+
+    <!-- End note -->
+    <section id="sec-endnote" style="margin-top:3em;">
+      <h2>Note: divergence metrics and the integral duality</h2>
+      <div style="
+        max-width: 680px;
+        background: #f7f7f2;
+        border-left: 3px solid #b0b0a0;
+        padding: 1.1em 1.5em;
+        font-size: 0.95em;
+        line-height: 1.7;
+      ">
+        <p>
+          <p>
+            \(\Delta(x)=F_P(x)-F_Q(x)\): pointwise CDF gap. \(Q^{-1}(p)-P^{-1}(p)\): quantile-space counterpart.
+            Both are dual slices of the same enclosed area in the \((x,p)\) plane.
+          </p>
+          <ul style="margin:0.4em 0;">
+            <li>L1: \(\int_x|\Delta(x)|\,dx = \int_0^1|Q^{-1}(p)-P^{-1}(p)|\,dp = W_1\) (identical by duality).</li>
+            <li>L2: <em>not</em> equal. Quantile gap \(\text{gap}(p)=\Delta(x)/f(x)\), so
+              $$\frac{\text{gap}(p)^2\,dp}{\Delta(x)^2\,dx}=\frac{1}{f(x)}.$$
+              Equal only when \(f(x)=1\) everywhere (uniform).</li>
+            <li>Log-UAR space: reduces variation in \(1/f(x)\) vs raw flow space. For log-normal stations ED &asymp; W&#8322; rank order. For multimodal/heavy-tailed log-space distributions they can disagree in both magnitude and rank, in the same regime where fixed-bandwidth KDE is most likely to mis-represent the density.</li>
+          </ul>
+        <table style="border-collapse:collapse; font-size:0.93em; width:100%; margin:0.5em 0 0.8em 0;">
+          <thead>
+            <tr style="border-bottom:1px solid #bbb;">
+              <th style="text-align:left; padding:3px 10px 3px 0; font-weight:600;">Name</th>
+              <th style="text-align:left; padding:3px 10px; font-weight:600;">Formula</th>
+              <th style="text-align:left; padding:3px 0; font-weight:600;">Space</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding:4px 10px 4px 0;">W&#8321; (Wasserstein-1,&nbsp;MAE)</td>
+              <td style="padding:4px 10px;">\(\int|\Delta(x)|\,dx\)</td>
+              <td style="padding:4px 0;">CDF &#x21d4; quantile</td>
+            </tr>
+            <tr style="background:#eeede8;">
+              <td style="padding:4px 10px 4px 0;">Cram&#233;r distance</td>
+              <td style="padding:4px 10px;">\(\int\Delta(x)^2\,dx\)</td>
+              <td style="padding:4px 0;">CDF</td>
+            </tr>
+            <tr>
+              <td style="padding:4px 10px 4px 0;">Energy distance (ED)</td>
+              <td style="padding:4px 10px;">\(2\int\Delta(x)^2\,dx\)</td>
+              <td style="padding:4px 0;">CDF (= Cram&#233;r&nbsp;&times;&nbsp;2)</td>
+            </tr>
+            <tr style="background:#eeede8;">
+              <td style="padding:4px 10px 4px 0;">W&#8322; (Wasserstein-2, RMSE)</td>
+              <td style="padding:4px 10px;">\(\int(Q^{-1}(p)-P^{-1}(p))^2\,dp\)</td>
+              <td style="padding:4px 0;">quantile</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {{ sections.duality }}
+
+      <div style="
+        max-width: 680px;
+        background: #f7f7f2;
+        border-left: 3px solid #b0b0a0;
+        padding: 1.1em 1.5em;
+        font-size: 0.95em;
+        line-height: 1.7;
+        margin-top: 1em;
+      ">
+        <p style="margin-top:0.6em;">
+          <strong>Consequence for large heterogeneous catchment samples.</strong>
+        </p>
+        <ul style="margin:0.3em 0;">
+          <li>Raw x-space: weights large-flow events heavily (x-axis dominated by high magnitudes).</li>
+          <li>Log-UAR space (used here): equal weight per decade, approximating L1 without explicit normalisation.</li>
+          <li>Quantile space (W&#8321;/W&#8322;): p-axis on [0,1] removes scale problem, but shifts weight to low-flow end for ephemeral catchments where measurement uncertainty is highest.</li>
+          <li>Volume-normalised MAE: corrects for catchment size, but inflates penalty for dry catchments near detection floor.</li>
+          <li>No single normalisation is unbiased across all hydrological regimes. The choice depends on which part of the distribution matters for the application.</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+{{ bokeh_script }}
+{% endblock %}
