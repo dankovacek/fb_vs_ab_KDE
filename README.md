@@ -16,9 +16,10 @@ streamflow records as prior knowledge. We demonstrate the approach on
 the [Caravan](https://caravan-hydrology.github.io/) large-sample dataset
 ([<span class="nocase">Kratzert et al.</span>
 2023](#ref-kratzert2023caravan), [2025](#ref-kratzert_2025_caravancsv)),
-comparing flow duration curves ([Foster 1934](#ref-foster1934duration);
-[Vogel and Fennessey 1994](#ref-vogel1994flow)) estimated with the fixed
-(FB) and adaptive (AB) methods across geographically distinct regions.
+comparing flow duration curves
+([**foster1934duration?**](#ref-foster1934duration); [Vogel and
+Fennessey 1994](#ref-vogel1994flow)) estimated with the fixed (FB) and
+adaptive (AB) methods across geographically distinct regions.
 
 Both methods assume a Gaussian kernel:
 
@@ -222,13 +223,6 @@ Chagas, Vinı́cius BP, Pedro LB Chaffe, Nans Addor, et al. 2020.
 al.</span> 2020. “CAMELS-GB: Hydrometeorological Time Series and
 Landscape Attributes for 671 Catchments in Great Britain.” *Earth System
 Science Data* 12 (4): 2459–83.
-
-</div>
-
-<div id="ref-foster1934duration" class="csl-entry">
-
-Foster, H Alden. 1934. “Duration Curves.” *Transactions of the American
-Society of Civil Engineers* 99 (1): 1213–35.
 
 </div>
 
