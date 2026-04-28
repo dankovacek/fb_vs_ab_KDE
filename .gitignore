@@ -15,8 +15,7 @@ cache/
 data/
 
 # Generated figures and reports
-images/
-results/
+results/*
 report/max_kde_diffs.html
 scripts/max_kde_diffs.html
 

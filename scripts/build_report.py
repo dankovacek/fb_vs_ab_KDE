@@ -1851,47 +1851,7 @@ def _fig_qshift_sensitivity_profile(
     _Y_CAP % on the relative axis are clipped and a red dashed line marks
     the cap.
     """
-    _PROSE_STYLE = (
-        "font-family:'EB Garamond',Palatino,serif; font-size:13px; "
-        "max-width:720px; color:#222; line-height:1.65; margin-bottom:8px;"
-    )
-    description = Div(text=f"""
-<div style="{_PROSE_STYLE}">
-  <p><strong>Motivating question:</strong> Does setting bandwidth from a
-  measurement-error model (AB) raise or lower the flow-duration curve quantile
-  estimate relative to the Silverman fixed-bandwidth (FB) estimator? The direction
-  matters: an AB estimate that is larger than FB at a given exceedance probability
-  implies that AB assigns less cumulative probability below that flow level,
-  producing a more conservative (larger) design flow. Conversely, a smaller AB
-  estimate indicates that AB concentrates more probability mass below that flow
-  level than FB does, yielding a less conservative estimate.</p>
-
-  <p>The <strong>upper panel</strong> for each region shows the <em>magnitude</em>
-  of the per-bin implied quantile shift (unsigned %, AB density basis). The
-  <strong>lower panel</strong> shows the <em>direction</em>: the cross-station
-  median and 95% band of the signed CDF difference
-  CDF<sub>AB</sub>(x) &minus; CDF<sub>FB</sub>(x) at each unit-area runoff level.</p>
-
-  <p><strong>Interpretation of the direction panel:</strong> When the median is
-  positive, AB accumulates more probability mass below x than FB; the AB flow
-  quantile at that exceedance probability is <em>lower</em> than FB. When the
-  median is negative, AB accumulates less mass and the AB quantile is <em>higher</em>
-  than FB. A zero-crossing marks the flow level at which the two estimators assign
-  equal cumulative probability.</p>
-
-  <p>This sign structure has a theoretical basis. In the dense middle range of the
-  flow-duration curve, the AB per-observation precision floor
-  (ln(1 + &epsilon;(q)) for 5% relative measurement error) is approximately
-  0.049 nats, well below the typical Silverman bandwidth of 0.15 to 0.6 nats for
-  daily streamflow records. AB therefore concentrates density more tightly in that
-  region, shifting cumulative mass downward relative to FB (positive delta, lower
-  AB quantile). Near the sparse tails the Voronoi half-widths grow and may approach
-  or exceed the Silverman bandwidth, reversing this effect. The zero-crossing of the
-  median delta corresponds to the flow level at which the AB and FB estimators
-  allocate equal cumulative probability, i.e., where the local AB bandwidth crosses
-  the global Silverman bandwidth.</p>
-</div>
-""", width=_W_SUMMARY * 2 + 80)
+    description = Div(text="", width=_W_SUMMARY * 2 + 80, height=0)
 
     _Y_MIN_CLIP = 1e-2     # floor to keep log y-axis finite
     _Y_CAP      = 1000.0   # shifts above this are low-density artefacts
@@ -1998,6 +1958,7 @@ def _fig_qshift_sensitivity_profile(
 
         # --- Direction panel: signed median CDF(AB) - CDF(FB) ---
         if "p50_delta" not in prof.columns:
+            fig.xaxis.visible = True   # no direction panel below; restore x-axis
             continue
 
         d_lo  = prof["p2p5_delta"].to_numpy(dtype=float)
@@ -2036,7 +1997,7 @@ def _fig_qshift_sensitivity_profile(
         if valid_d.any():
             dir_fig.varea(
                 x=x_uar[valid_d], y1=d_lo[valid_d], y2=d_hi[valid_d],
-                fill_color=color, fill_alpha=0.20,
+                fill_color=color, fill_alpha=0.50,
                 legend_label="95% band",
             )
 

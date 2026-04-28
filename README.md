@@ -4,9 +4,9 @@ Jump to [Reproducing the results](#reproducing-the-results).
 
 ## Background
 
-The kernel bandwidth is a hyperparameter that governs smoothing of the marginal density of finite observations. The optimality of a fixed ("plug-in") kernel bandwidth estimator has been documented on the basis of a Gaussian parametric assumption on the curvature of the pdf $\int f''(x) dx$.
+The kernel bandwidth is a hyperparameter that governs smoothing of the marginal density of finite observations. The optimality of a fixed ("plug-in") kernel bandwidth estimator has been documented on the basis of a Gaussian parametric assumption on the "roughness" of the pdf $[\int f''(x)]^2 dx$.
 
-We propose setting the bandwidth as a function of measurement uncertainty, using the heteroscedastic precision floor of daily streamflow records as prior knowledge. We demonstrate the approach on the [Caravan](https://caravan-hydrology.github.io/) large-sample dataset, comparing flow duration curves estimated with the fixed (FB) and adaptive (AB) methods across geographically distinct regions.
+We propose setting the bandwidth as a function of (an assumed piecewise linear) measurement uncertainty, using the heteroscedastic precision floor of daily streamflow records as prior knowledge. We demonstrate the approach on the [Caravan](https://github.com/kratzert/Caravan) large-sample dataset, comparing flow duration curves estimated with the fixed (FB) and adaptive (AB) methods across geographically distinct regions.
 
 Both methods assume a Gaussian kernel:
 
@@ -20,7 +20,19 @@ where $\hat{\sigma}$ is the sample standard deviation, IQR is the interquartile 
 
 The adaptive bandwidth uses a piecewise linear measurement error model to set a per-observation bandwidth floor. The error model is shown below:
 
+For the image to render in the README, use a relative path if the image is in the repository:
+
+```markdown
 ![An approximate error model for daily streamflows](images/error_model.png)
+```
+
+Or use a full URL if hosted elsewhere:
+
+```markdown
+![An approximate error model for daily streamflows](https://example.com/images/error_model.png)
+```
+
+Since your file is at `/home/danbot/code/fb_vs_ab_KDE/README.md`, place `error_model.png` in an `images/` subdirectory at `/home/danbot/code/fb_vs_ab_KDE/images/` and use the relative path version above.
 
 Both the error function and the minimum flow threshold are site-specific assumptions. Probabilistic rating curves, when available, could replace the empirical model used here.
 

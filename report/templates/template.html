@@ -766,24 +766,23 @@
         {% if 'qshift_sensitivity' in sections %}
         <h4 id="sec-qshift-sensitivity" style="margin-top:2em;">6.4.7&ensp;Full-support quantile-shift sensitivity</h4>
         <p style="max-width:820px; line-height:1.7;">
-          At each bin \(j\) the implied shift is evaluated using the AB (adaptive)
-          density as the reference:
-          \(\text{shift}_j = (e^{|\Delta F_j|\,\delta_j/\hat{f}^{AB}_j}-1)\times 100\).
-          This is the <em>precision-floor</em> interpretation: the minimum displacement
-          consistent with the AB&ndash;FB CDF disagreement, using the most permissive
-          density estimate as the denominator.
-          Each panel sweeps all 256 bins for every station at 8-bit resolution
-          and shows the cross-station distribution of that shift as a function of UAR.
-          The shaded band spans the 2.5th&ndash;97.5th percentile across stations;
-          the bold line is the median.
+          For each region, the upper panel shows the cross-station magnitude of the
+          per-bin implied quantile shift
+          \(\text{shift}_j = (e^{|\Delta F_j|\,\delta_j/\hat{f}^{AB}_j}-1)\times 100\)
+          as a function of unit-area runoff; the shaded band spans the
+          2.5th&ndash;97.5th percentile across stations and the bold line is the median.
           Values above 1&thinsp;000&thinsp;% arise where \(\hat{f}^{AB}_j \to 0\)
-          (deep tails or inter-modal troughs with negligible density) and are clipped
-          at the red dashed line; they are artefacts of vanishing density, not
-          physically meaningful flow displacements.
-          Elevated shift in the body of the distribution identifies where on the
-          flow support bandwidth choice most strongly affects quantile estimates,
-          and demonstrates that the KS-point shift is a lower bound on a profile
-          that can be substantially larger across the full support.
+          (sparse tails or inter-modal troughs) and are clipped at the red dashed line.
+          The lower panel shows the <em>direction</em> of the divergence: the
+          cross-station median and 95% band of the signed CDF difference
+          \(\mathrm{CDF_{AB}}(x) - \mathrm{CDF_{FB}}(x)\).
+          Positive values indicate AB accumulates more probability below \(x\),
+          yielding a lower AB quantile at that exceedance level; negative values
+          indicate the reverse: FB concentrates more mass in that region and the
+          Silverman estimator is locally the tighter of the two.
+          The shift magnitude is everywhere above zero, but the direction changes
+          sign across the flow range, confirming that neither estimator
+          uniformly smooths more than the other at all flow levels.
         </p>
         {{ sections.qshift_sensitivity }}
         {% endif %}
