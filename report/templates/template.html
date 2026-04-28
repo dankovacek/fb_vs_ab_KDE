@@ -286,7 +286,7 @@
           \(\varepsilon/p_j\), a bin with low density and only a marginally smaller
           CDF gap can yield a substantially larger implied shift.
           The KS-point shift is therefore a <em>lower bound</em> on the worst-case
-          shift across the support; section&thinsp;6.4.7 presents the full-support sweep.
+          shift across the support. Section&thinsp;6.4.7 presents the full-support sweep.
         </li>
         <li>
           <strong>Wasserstein-1 distance (W&#8321;)</strong>: the total area between the two CDFs
@@ -351,18 +351,15 @@
           <li><strong>Scenario 1 (asymmetric bimodal).</strong>
             \(w_1=0.35\), \(\mu_1=\ln(0.3)\,\mathrm{m^3\,s^{-1}}\), \(\sigma_1=0.20\);
             \(w_2=0.65\), \(\mu_2=\ln(30)\,\mathrm{m^3\,s^{-1}}\), \(\sigma_2=0.90\).
-            No measurement artifacts.  Tests bimodal recovery with a 4.5&times; spread
-            contrast between components.
+            No measurement artifacts.
           </li>
           <li><strong>Scenario 2 (rating-curve precision floor).</strong>
             \(w_1=0.25\), \(\mu_1=\ln(0.02)\,\mathrm{m^3\,s^{-1}}\), \(\sigma_1=0.30\)
-            (low-Q pool inside the high-error zone);
+            (low-Q pool inside the high-error zone).
             \(w_2=0.75\), \(\mu_2=\ln(0.5)\,\mathrm{m^3\,s^{-1}}\), \(\sigma_2=0.10\)
             (narrow high-flow mode).
             \(Q < 0.1\,\mathrm{m^3\,s^{-1}}\) is quantized to the nearest
             \(0.01\,\mathrm{m^3\,s^{-1}}\) step (rating-curve resolution floor).
-            The narrow mode forces a small Silverman \(h\), which then preserves
-            quantization spikes in the low-Q tail; the adaptive floor smooths them.
             Orange shading marks the high-error zone (\(Q < 0.1\,\mathrm{m^3\,s^{-1}}\)).
           </li>
         </ul>
@@ -376,14 +373,8 @@
         <h3>5.2&ensp;Mode-separation sweep</h3>
         <p style="max-width:760px; line-height:1.75;">
           Component spreads (\(\sigma_1 = \sigma_2 = 0.55\)) and weights
-          (\(w_1 = w_2 = 0.5\)) are held constant; only the log-space separation
+          (\(w_1 = w_2 = 0.5\)) are held constant. Only the log-space separation
           \(\Delta\mu = \mu_2 - \mu_1\) is varied from 0 to 5 in six equal steps.
-          At \(\Delta\mu = 0\) the two components coincide, collapsing to a single
-          log-normal where AB and FB are expected to agree (lower bound).
-          As \(\Delta\mu\) grows the distribution becomes increasingly bimodal and
-          Silverman&rsquo;s bandwidth is stretched across the widening inter-modal gap,
-          over-smoothing both modes simultaneously until the error approaches an upper
-          plateau.
         </p>
         {% if sections.synthetic_separation_sweep is defined %}
         {{ sections.synthetic_separation_sweep }}
@@ -394,24 +385,13 @@
       <section id="sec-synthetic-spread-sweep" style="margin-top:2em;">
         <h3>5.3&ensp;Spread-asymmetry sweep</h3>
         <p style="max-width:760px; line-height:1.75;">
-          Silverman (1986) addresses skewness and bimodal separation as the two conditions
-          that bound the MISE optimality of his rule of thumb.  This sweep identifies a
-          third condition: asymmetry in the <em>spread</em> of the two components.  When
-          one component is substantially broader than the other, the fixed bandwidth is
-          attracted to the narrower mode and over-smooths the broader tail, even when the
-          modes are not strongly separated.
-        </p>
-        <p style="max-width:760px; line-height:1.75;">
           Component means (\(\mu_1 = \ln(2)\,\mathrm{m^3\,s^{-1}}\),
           \(\mu_2 = \ln(8)\,\mathrm{m^3\,s^{-1}}\); separation \(\approx 2.5\sigma\))
-          and weights (\(w_1 = w_2 = 0.5\)) are fixed so that at ratio 1:1 Silverman
-          performs reasonably and the asymmetry failure mode emerges cleanly as the
-          ratio grows.
+          and weights (\(w_1 = w_2 = 0.5\)) are fixed.
           The ratio \(\sigma_1 / \sigma_2\) is swept from 1:1 (symmetric spread) to
           12:1 on a log scale in six steps, with the harmonic mean of
           \((\sigma_1, \sigma_2)\) held constant so that total mixture spread is
-          comparable across panels.  Extending the sweep to 12:1 allows the score
-          curves to approach their upper plateau.
+          comparable across panels.
         </p>
         {% if sections.synthetic_spread_sweep is defined %}
         {{ sections.synthetic_spread_sweep }}
@@ -428,9 +408,6 @@
             \text{ED}^2  = 2\sum_j (\hat{F}_j - F_j)^2\,\delta_j$$
           MISE sums squared PMF residuals \((\hat{f} - f)\).
           ED sums squared CDF gaps \((\hat{F} - F)\).
-          Because a local density error accumulates in the CDF but a distant
-          error of equal magnitude does not, the two metrics can rank estimators
-          in opposite order.
         </p>
         <p style="max-width:760px; line-height:1.75;">
           Each column below uses the Scenario 2 bimodal distribution
@@ -449,17 +426,13 @@
           Both A and B remove mass &epsilon; from the narrow high-Q peak.
           A deposits it at the adjacent bin. B deposits it at the low-Q pool,
           about 40 bins away.
-          The PMF residuals are equal in magnitude so MISE is unchanged.
-          The CDF gap for B persists across the full inter-modal distance,
-          making ED about 6.3&times; larger.
         </p>
         <p style="max-width:760px; line-height:1.75;">
           <strong>Example 2</strong> holds ED approximately constant while varying MISE.
           Both C and D move mass M from the narrow peak to the low-Q pool, so the
           CDF gap profiles are nearly identical (ED within about 4&thinsp;%).
           C deposits the mass at a single bin (spike). D spreads the same mass over
-          five adjacent bins. MISE penalises C&#x2019;s height concentration 5&times; more
-          than D&#x2019;s spread.
+          five adjacent bins.
         </p>
         {% if sections.mise_vs_ed_illustration is defined %}
         {{ sections.mise_vs_ed_illustration }}
@@ -490,9 +463,7 @@
         <p style="max-width:760px; line-height:1.75;">
           Peak separation (Panel B) is normalised by the mean component &sigma; using
           the valley-split method, not by the global distribution sigma.
-          Panel C shows spread asymmetry, an empirical failure mode not covered by
-          Silverman (1986): when the two mixture components have very different spreads,
-          a fixed bandwidth over-smooths the broader tail.
+          Panel C shows spread asymmetry (max/min component &sigma; ratio, bimodal stations only).
           Bimodality is tested via the Hartigan &amp; Hartigan (1985) dip test on raw
           daily log-UAR observations (no bandwidth parameter), applied to all three
           regions (CAMELS-BR, CAMELS-GB, and HYSETS).
@@ -509,8 +480,6 @@
           Filled circles: median.
           Rows: MISE, KS / W&#8321;, ED, KL.
           X-axes linked across regions within each row.
-          These pooled distributions establish the overall scale of divergence before
-          conditioning on the Silverman validity bound.
         </p>
         {{ sections.ecdfs }}
       </section>
@@ -520,14 +489,8 @@
       <section id="sec-results-rl-stability" style="margin-top:2em;">
         <h3>6.3&ensp;Record-length stability</h3>
         <p style="max-width:760px; line-height:1.75;">
-          Longer records narrow Voronoi half-widths, pulling adaptive bandwidths
-          toward the Silverman global scale; shorter records leave large inter-observation
-          gaps that the adaptive estimator must bridge with wider kernels.
           Each panel shows ECDFs of one divergence metric split at the global median
           record length (dashed = short records, solid = long records).
-          Systematic separation between strata indicates that divergence between the
-          two estimators depends partly on the density of the observation record,
-          independent of the distributional shape conditions in section&nbsp;6.1.
         </p>
         {{ sections.record_length_stability }}
       </section>
@@ -542,8 +505,7 @@
           documented conditions: log-space skewness and bimodal separation.
           <strong>Rule Set B</strong> (section 6.4.2) uses an empirically identified third
           condition not covered by Silverman (1986): asymmetry in the spread of the two
-          mixture components.  When one component is much broader than the other, the fixed
-          bandwidth is attracted to the narrower mode and over-smooths the broader tail.
+          mixture components.
           This condition is quantified as
           \(\max(\sigma_\text{left}, \sigma_\text{right}) / \min(\sigma_\text{left}, \sigma_\text{right})\)
           and is evaluated only for bimodal stations (n_peaks&thinsp;&ge;&thinsp;2; dip test
@@ -629,10 +591,7 @@
           (components have similar spread).
           Dashed (black): asymmetry &gt;&thinsp;{{ spread_asym_threshold | default('3') | int }}&times;
           (one component substantially broader than the other).
-          The threshold is set from synthetic validation (section&nbsp;5); a ratio of
-          {{ spread_asym_threshold | default('3') | int }}&times; corresponds to the point
-          in the synthetic sweep where the FB KS divergence against truth begins to
-          separate materially from the AB divergence.
+          Threshold derived from the synthetic spread-asymmetry sweep (section&nbsp;5.3).
         </p>
         {{ sections.spread_asymmetry_stratified_divergence }}
         {% if sections.dotwhisker_b is defined %}
@@ -650,7 +609,7 @@
             Base population: all stations with finite log-space skewness (same as
             Rule Set A).  Group A includes unimodal stations (NaN spread asymmetry)
             and bimodal stations whose component &sigma;-ratio does not exceed the
-            threshold; group B is the complement.
+            threshold. Group B is the complement.
           </p>
           {{ bstrap_table_b }}
         </details>
@@ -660,15 +619,11 @@
         {% if sections.bin_concentration is defined %}
         <h4 id="sec-results-bin-concentration" style="margin-top:2em;">6.4.3&ensp;Mass concentration into too few bins</h4>
         <p style="max-width:820px; line-height:1.75;">
-          An artifact not represented in the synthetic sweep arises when a station&rsquo;s
-          observed flow record produces a PMF where the bulk of the total probability mass
-          falls into just a handful of grid cells.  This happens in discretely quantized
-          records (e.g. HYSETS stations whose daily flow values repeat at a small set of
-          rounded levels) and in very short records where the empirical distribution is
-          nearly concentrated on one or two flow magnitudes.  When {{ bin_conc_n_bins }} or fewer bins hold
-          a large fraction of the total mass, the KDE is effectively being asked to smooth
-          a near-Dirac comb, and the Silverman bandwidth (derived from a Gaussian
-          reference) is poorly suited to that task.
+          These panels flag stations where the bulk of PMF mass falls into just a handful
+          of grid cells. This arises in discretely quantized records (e.g. repeated daily
+          flow values) and in very short records. When {{ bin_conc_n_bins }} or fewer bins hold a
+          large fraction of the total mass, the observed distribution approximates a
+          near-Dirac comb.
         </p>
         <p style="max-width:820px; line-height:1.75;">
           Each panel below shows the empirical CDF of
@@ -694,9 +649,6 @@
           (top-{{ bin_conc_n_bins }} mass &lt;&thinsp;{{ bin_conc_threshold }});
           <strong>dashed</strong> lines show stations
           where the rule is triggered (top-{{ bin_conc_n_bins }} mass &ge;&thinsp;{{ bin_conc_threshold }}).
-          If divergence between AB and FB is systematically higher for the dashed group,
-          bin concentration is an independent driver of KDE disagreement beyond the
-          skewness and bimodality conditions identified in sections 6.4.1 and 6.4.2.
         </p>
         {{ sections.bin_concentration_stratum }}
         {% if sections.dotwhisker_c is defined %}
@@ -736,9 +688,6 @@
           <strong>Dashed</strong> stations fail at least one criterion, including
           any station where zero-flow fraction data are unavailable (the favourable
           condition cannot be confirmed).
-          This composite gate isolates the subset where FB and AB are expected to differ
-          most. If the two ECDF curves are still close for the solid group, the five
-          criteria together are insufficient to explain the lack of separation.
         </p>
         {{ sections.combined_stratum_divergence }}
         {% endif %}
@@ -746,19 +695,14 @@
         {% if 'qshift_combined' in sections %}
         <h4 style="margin-top:2em;">6.4.6&ensp;Quantile-shift summary</h4>
         <p style="max-width:820px; line-height:1.7;">
-          All panels translate CDF gaps into implied flow-percentage shifts
-          (see derivation in section&thinsp;4).
+          Implied flow-percentage shift derived from CDF gaps (see section&thinsp;4).
           <strong>Left:</strong> ECDFs of the KS-point implied shift
-          \(\text{shift\%} = (e^{D_\text{KS}\,\delta_{j^*}/p_{j^*}}-1)\times 100\),
-          evaluated at the max-KS bin \(j^*\); this is a lower bound on the
-          worst-case shift across the full support.
+          \(\text{shift\%} = (e^{D_\text{KS}\,\delta_{j^*}/p_{j^*}}-1)\times 100\)
+          evaluated at the max-KS bin \(j^*\).
           AB = dashed, FB = solid, one colour per region.
-          <strong>Centre:</strong> ECDFs of the maximum implied shift over all bins
-          using the AB (adaptive) density as the basis; one line per region.
-          <strong>Right:</strong> same for the FB (Silverman) density basis.
-          The rightward displacement of the centre and right panels relative to
-          the left panel quantifies how much the KS-point lower bound is exceeded.
-          All panels share the same x-axis range.
+          <strong>Right:</strong> ECDFs of the maximum implied shift over the full
+          support, AB density basis, one line per region.
+          Both panels share the same x-axis range.
         </p>
         {{ sections.qshift_combined }}
         {% endif %}
@@ -769,20 +713,16 @@
           For each region, the upper panel shows the cross-station magnitude of the
           per-bin implied quantile shift
           \(\text{shift}_j = (e^{|\Delta F_j|\,\delta_j/\hat{f}^{AB}_j}-1)\times 100\)
-          as a function of unit-area runoff; the shaded band spans the
-          2.5th&ndash;97.5th percentile across stations and the bold line is the median.
+          as a function of unit-area runoff. The shaded band spans the
+          95% confidence interval across stations and the bold line is the median.
           Values above 1&thinsp;000&thinsp;% arise where \(\hat{f}^{AB}_j \to 0\)
           (sparse tails or inter-modal troughs) and are clipped at the red dashed line.
           The lower panel shows the <em>direction</em> of the divergence: the
           cross-station median and 95% band of the signed CDF difference
           \(\mathrm{CDF_{AB}}(x) - \mathrm{CDF_{FB}}(x)\).
-          Positive values indicate AB accumulates more probability below \(x\),
-          yielding a lower AB quantile at that exceedance level; negative values
-          indicate the reverse: FB concentrates more mass in that region and the
-          Silverman estimator is locally the tighter of the two.
-          The shift magnitude is everywhere above zero, but the direction changes
-          sign across the flow range, confirming that neither estimator
-          uniformly smooths more than the other at all flow levels.
+          Positive values indicate AB assigns more probability below \(x\),
+          yielding a lower AB quantile at that exceedance level. Negative values
+          indicate the reverse.
         </p>
         {{ sections.qshift_sensitivity }}
         {% endif %}
@@ -796,17 +736,9 @@
           \(|\gamma_1| < {{ skew_threshold | default('1.8') }}\) (log-space skewness)
           and mode separation \(\Delta\mu \le {{ peak_sep_threshold | default('3') }}\,\sigma\)
           (or unimodal).
-          Satisfying these conditions gives Silverman&rsquo;s strongest theoretical
-          assurance that \(\hat{f}_\mathrm{FB}\) will be near-optimal relative to the
-          true density.  That assurance, however, concerns optimality against truth,
-          not agreement between the two estimators.
-          Even with all criteria satisfied, \(\hat{f}_\mathrm{AB}\) and
-          \(\hat{f}_\mathrm{FB}\) can still assign materially different probability
-          mass to specific flow ranges.  Annotations show \(\gamma_1\) (skewness) and
+          Annotations show \(\gamma_1\) (skewness) and
           \(\Delta\mu\) (peak separation, or &ldquo;unimodal&rdquo;) with a
           &check;&thinsp;PASS badge confirming that the criterion is satisfied.
-          The practical implication is that passing Silverman&rsquo;s criteria does not
-          allow a practitioner to infer that the choice of bandwidth rule is inconsequential.
         </p>
         {{ sections.isd_paradox }}
         {% endif %}
@@ -818,9 +750,7 @@
         <p style="max-width:760px; line-height:1.75;">
           Left: Pearson product-moment correlation between each pair of divergence metrics
           (pooled across all regions, 8-bit grid). Right: Kendall rank correlation (&#x1D70F;) for the same pairs.
-          Only the lower triangle is shown. A value near 1 indicates that the two metrics
-          rank stations nearly identically; divergence from 1 indicates cases where one
-          metric is sensitive to structure that the other does not weight.
+          Only the lower triangle is shown.
         </p>
         {% if sections.metric_corr_heatmaps is defined %}
         {{ sections.metric_corr_heatmaps }}
@@ -858,10 +788,10 @@
       <h2><span class="sec-num">8</span>Discussion checklist</h2>
       <ul>
         <li>KS increases with bitrate? &rarr; estimators disagree at finer scales, coarser grids mask it.</li>
-        <li>Worst-KS stations perennial or ephemeral? Ephemeral: many zero-flow days clipped to min UAR;
-          both CDFs concentrated near lower bound, may amplify or suppress differences.</li>
+        <li>Worst-KS stations perennial or ephemeral? Ephemeral: many zero-flow days clipped to min UAR.
+          Both CDFs concentrated near lower bound, may amplify or suppress differences.</li>
         <li>Sharper adaptive peaks where observations repeat? Frozen-flow: many identical daily values.
-          Voronoi floor widens kernels there; Silverman smooths globally, may spread mass away from true cluster.</li>
+          Voronoi floor widens kernels there. Silverman smooths globally and may spread mass away from true cluster.</li>
         <li>Silverman systematically over-smoothed in low-flow tail? PDFs disagreeing mainly at low UAR
           &rarr; Silverman over-spreading mass below the measurement uncertainty floor.</li>
         <li>Divergence decreases with record length? Longer records shrink Voronoi half-widths,
@@ -873,8 +803,8 @@
         <li>High-KL/low-KS: CDFs close globally, PDFs disagree sharply at localized bins
           (sparse tail, inter-modal trough where Silverman spreads mass away).
           High-KS/low-KL: broad CDF shift, no sharp PMF redistribution. Different diagnostic paths.</li>
-        <li>Define severity threshold (e.g. KS &gt; 0.05 or quantile shift &gt; 10%);
-          report fraction of stations exceeding it per region.</li>
+        <li>Define severity threshold (e.g. KS &gt; 0.05 or quantile shift &gt; 10%).
+          Report fraction of stations exceeding it per region.</li>
       </ul>
     </section>
 
@@ -958,7 +888,7 @@
             <li>L2: <em>not</em> equal. Quantile gap \(\text{gap}(p)=\Delta(x)/f(x)\), so
               $$\frac{\text{gap}(p)^2\,dp}{\Delta(x)^2\,dx}=\frac{1}{f(x)}.$$
               Equal only when \(f(x)=1\) everywhere (uniform).</li>
-            <li>Log-UAR space: reduces variation in \(1/f(x)\) vs raw flow space. For log-normal stations ED &asymp; W&#8322; rank order. For multimodal/heavy-tailed log-space distributions they can disagree in both magnitude and rank, in the same regime where fixed-bandwidth KDE is most likely to mis-represent the density.</li>
+            <li>Log-UAR space: reduces variation in \(1/f(x)\) vs raw flow space. For log-normal stations ED &asymp; W&#8322; rank order. For multimodal or heavy-tailed log-space distributions they can disagree in both magnitude and rank, in the same regime where fixed-bandwidth KDE is most likely to mis-represent the density.</li>
           </ul>
         <table style="border-collapse:collapse; font-size:0.93em; width:100%; margin:0.5em 0 0.8em 0;">
           <thead>

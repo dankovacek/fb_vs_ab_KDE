@@ -2138,14 +2138,13 @@ def _fig_qshift_grid(
     _style_legend(f_ecdf, "bottom_right", "10px")
     f_ecdf.add_layout(f_ecdf.legend[0], "right")
 
-    # ---- Centre and right panels: max-over-support shift, one basis each ----
+    # ---- Right panel: max-over-support shift, AB density basis ----
     _has_max = any(
         "max_qshift_adp_pct" in region_data[r]["df8"].columns for r in regions
     )
     if _has_max:
-        f_max_adp = _max_ecdf_panel("max_qshift_adp_pct", "Max shift \u2013 AB basis")
-        f_max_sil = _max_ecdf_panel("max_qshift_sil_pct", "Max shift \u2013 FB basis")
-        return row(f_ecdf, f_max_adp, f_max_sil)
+        f_max_adp = _max_ecdf_panel("max_qshift_adp_pct", "Max shift over support (AB basis)")
+        return row(f_ecdf, f_max_adp)
     return row(f_ecdf)
 
 # ---------------------------------------------------------------------------
