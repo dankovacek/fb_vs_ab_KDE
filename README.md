@@ -20,19 +20,7 @@ where $\hat{\sigma}$ is the sample standard deviation, IQR is the interquartile 
 
 The adaptive bandwidth uses a piecewise linear measurement error model to set a per-observation bandwidth floor. The error model is shown below:
 
-For the image to render in the README, use a relative path if the image is in the repository:
-
-```markdown
 ![An approximate error model for daily streamflows](images/error_model.png)
-```
-
-Or use a full URL if hosted elsewhere:
-
-```markdown
-![An approximate error model for daily streamflows](https://example.com/images/error_model.png)
-```
-
-Since your file is at `/home/danbot/code/fb_vs_ab_KDE/README.md`, place `error_model.png` in an `images/` subdirectory at `/home/danbot/code/fb_vs_ab_KDE/images/` and use the relative path version above.
 
 Both the error function and the minimum flow threshold are site-specific assumptions. Probabilistic rating curves, when available, could replace the empirical model used here.
 
